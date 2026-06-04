@@ -497,20 +497,20 @@ function confirmDelete(table) {
 }
 function closeModal() {
   document.getElementById('delete-modal').classList.remove('show');
-  deleteTarget = null;
+  // deleteTarget はexecuteDelete完了後にリセットするためここではリセットしない
 }
 async function executeDelete() {
-  if (!deleteTarget) return;
+  const table = deleteTarget;  // 先に退避
+  deleteTarget = null;
   closeModal();
+  if (!table) return;
   try {
-    // Supabase REST API: 全件削除には created_at フィルターを使用
-    // (フィルターなしDELETEはAPIレベルでブロックされるため)
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/${deleteTarget}?created_at=gte.2000-01-01`,
+      `${SUPABASE_URL}/rest/v1/${table}?created_at=gte.2000-01-01`,
       { method: 'DELETE', headers: H }
     );
     if (res.ok) {
-      alert(`${deleteTarget} を削除しました`);
+      alert(`${table} を削除しました`);
       loadStats();
     } else {
       const errText = await res.text();
