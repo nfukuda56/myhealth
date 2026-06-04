@@ -3,257 +3,286 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>食事ログ 移行ツール</title>
+<title>health / migration tool</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@300;400;500&display=swap');
 
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --border: #2a2d3a;
-    --accent: #4ade80;
-    --accent-dim: #1a3d27;
-    --danger: #f87171;
-    --danger-dim: #3d1a1a;
-    --warn: #fbbf24;
-    --warn-dim: #3d2e0a;
-    --text: #e2e8f0;
-    --text-muted: #64748b;
-    --mono: 'DM Mono', monospace;
-    --sans: 'Noto Sans JP', sans-serif;
-  }
+:root {
+  --bg:          #0f1117;
+  --surface:     #1a1d27;
+  --surface2:    #13151e;
+  --border:      #2a2d3a;
+  --accent:      #4ade80;
+  --accent-dim:  #1a3d27;
+  --danger:      #f87171;
+  --danger-dim:  #3d1a1a;
+  --warn:        #fbbf24;
+  --warn-dim:    #3d2e0a;
+  --info:        #60a5fa;
+  --info-dim:    #1a2a3d;
+  --text:        #e2e8f0;
+  --text-muted:  #64748b;
+  --mono:        'DM Mono', monospace;
+  --sans:        'Noto Sans JP', sans-serif;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-weight: 300;
-    min-height: 100vh;
-    padding: 2rem 1rem;
-  }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 300;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
 
-  .container { max-width: 760px; margin: 0 auto; }
+.container { max-width: 800px; margin: 0 auto; }
 
-  header {
-    border-left: 3px solid var(--accent);
-    padding-left: 1rem;
-    margin-bottom: 2.5rem;
-  }
-  header h1 {
-    font-family: var(--mono);
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: var(--accent);
-    letter-spacing: 0.05em;
-  }
-  header p {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin-top: 0.3rem;
-    font-family: var(--mono);
-  }
+header {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  margin-bottom: 2.5rem;
+}
+header h1 {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+header p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+  font-family: var(--mono);
+}
 
-  .section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.2rem;
-  }
+/* Section */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+.section-title {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
-  .section-title {
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.7rem 0.5rem;
+  text-align: center;
+}
+.stat-val {
+  font-family: var(--mono);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--accent);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+.stat-sub {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
 
-  /* Stats row */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-  .stat {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.75rem;
-    text-align: center;
-  }
-  .stat-val {
-    font-family: var(--mono);
-    font-size: 1.4rem;
-    font-weight: 500;
-    color: var(--accent);
-    line-height: 1;
-  }
-  .stat-label {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    margin-top: 0.3rem;
-  }
+/* Table group label */
+.table-group {
+  margin-bottom: 1rem;
+}
+.table-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--info);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
 
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.6rem 1.1rem;
-    border-radius: 6px;
-    font-family: var(--mono);
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.15s;
-  }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Range row */
+.range-row {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
 
-  .btn-primary {
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .btn-primary:hover:not(:disabled) { background: var(--accent); color: #0f1117; }
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-primary  { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.btn-primary:hover:not(:disabled) { background: var(--accent); color: #0f1117; }
+.btn-danger   { background: var(--danger-dim); border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover:not(:disabled)  { background: var(--danger); color: #0f1117; }
+.btn-warn     { background: var(--warn-dim);   border-color: var(--warn);   color: var(--warn); }
+.btn-warn:hover:not(:disabled)    { background: var(--warn);   color: #0f1117; }
+.btn-sm { padding: 0.35rem 0.7rem; font-size: 0.7rem; }
 
-  .btn-danger {
-    background: var(--danger-dim);
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-  .btn-danger:hover:not(:disabled) { background: var(--danger); color: #0f1117; }
+/* Delete row */
+.delete-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.delete-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
 
-  .btn-warn {
-    background: var(--warn-dim);
-    border-color: var(--warn);
-    color: var(--warn);
-  }
-  .btn-warn:hover:not(:disabled) { background: var(--warn); color: #0f1117; }
+/* File area */
+.file-area {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 1.1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  position: relative;
+}
+.file-area:hover { border-color: var(--accent); }
+.file-area input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+}
+.file-area p    { font-size: 0.78rem; color: var(--text-muted); }
+.file-name      { font-family: var(--mono); font-size: 0.72rem; color: var(--accent); margin-top: 0.4rem; }
 
-  /* File input */
-  .file-area {
-    border: 1px dashed var(--border);
-    border-radius: 6px;
-    padding: 1.2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.15s;
-    position: relative;
-  }
-  .file-area:hover { border-color: var(--accent); }
-  .file-area input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
-  }
-  .file-area p { font-size: 0.8rem; color: var(--text-muted); }
-  .file-area .file-name {
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    color: var(--accent);
-    margin-top: 0.4rem;
-  }
+/* Date filter */
+.date-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+.date-row label { font-size: 0.75rem; color: var(--text-muted); }
+.date-row input[type=date] {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.5rem;
+}
 
-  /* Date filter */
-  .date-row {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-  }
-  .date-row label { font-size: 0.78rem; color: var(--text-muted); }
-  .date-row input[type=date] {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 0.8rem;
-    padding: 0.4rem 0.6rem;
-  }
+/* Action row */
+.action-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 1rem;
+}
+.preview-count { font-size: 0.72rem; color: var(--text-muted); font-family: var(--mono); }
 
-  /* Progress */
-  .progress-wrap {
-    background: var(--border);
-    border-radius: 4px;
-    height: 4px;
-    margin: 1rem 0;
-    overflow: hidden;
-    display: none;
-  }
-  .progress-bar {
-    height: 100%;
-    width: 0%;
-    background: var(--accent);
-    transition: width 0.2s;
-    border-radius: 4px;
-  }
+/* Progress */
+.progress-wrap {
+  background: var(--border);
+  border-radius: 4px;
+  height: 3px;
+  margin: 0.75rem 0;
+  overflow: hidden;
+  display: none;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.2s;
+  border-radius: 4px;
+}
 
-  /* Log */
-  .log {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.75rem 1rem;
-    font-family: var(--mono);
-    font-size: 0.73rem;
-    line-height: 1.8;
-    max-height: 240px;
-    overflow-y: auto;
-    display: none;
-    margin-top: 0.75rem;
-  }
-  .log-ok  { color: var(--accent); }
-  .log-err { color: var(--danger); }
-  .log-info{ color: var(--text-muted); }
+/* Log */
+.log {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.7rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  line-height: 1.9;
+  max-height: 220px;
+  overflow-y: auto;
+  display: none;
+  margin-top: 0.75rem;
+}
+.log-ok   { color: var(--accent); }
+.log-err  { color: var(--danger); }
+.log-info { color: var(--text-muted); }
+.log-warn { color: var(--warn); }
 
-  /* Confirm modal */
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--danger);
-    border-radius: 10px;
-    padding: 2rem;
-    max-width: 380px;
-    width: 90%;
-    text-align: center;
-  }
-  .modal h3 { font-family: var(--mono); color: var(--danger); margin-bottom: 0.75rem; }
-  .modal p  { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; }
-  .modal-btns { display: flex; gap: 0.75rem; justify-content: center; }
+/* Divider */
+.divider { height: 1px; background: var(--border); margin: 1rem 0; }
 
-  .divider { height: 1px; background: var(--border); margin: 0.75rem 0; }
-
-  .action-row {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-top: 1rem;
-  }
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  padding: 2rem;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+}
+.modal h3 { font-family: var(--mono); color: var(--danger); margin-bottom: 0.6rem; font-size: 0.95rem; }
+.modal p  { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.7; }
+.modal-btns { display: flex; gap: 0.6rem; justify-content: center; }
 </style>
 </head>
 <body>
@@ -261,65 +290,99 @@
 
   <header>
     <h1>health / migration tool</h1>
-    <p>食事ログ データ移行ユーティリティ — myhealth @ Supabase</p>
+    <p>myhealth @ Supabase — データ移行ユーティリティ</p>
   </header>
 
-  <!-- 現在のDB状況 -->
+  <!-- ① DB状況 -->
   <div class="section">
-    <div class="section-title">現在のDB状況</div>
-    <div class="stats">
-      <div class="stat"><div class="stat-val" id="st-total">—</div><div class="stat-label">総件数</div></div>
-      <div class="stat"><div class="stat-val" id="st-breakfast">—</div><div class="stat-label">朝食</div></div>
-      <div class="stat"><div class="stat-val" id="st-lunch">—</div><div class="stat-label">昼食</div></div>
-      <div class="stat"><div class="stat-val" id="st-dinner">—</div><div class="stat-label">夕食</div></div>
+    <div class="section-title">DB 状況</div>
+
+    <div class="table-group">
+      <div class="table-label">meals（食事ログ）</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-val" id="st-meals-total">—</div><div class="stat-label">総件数</div></div>
+        <div class="stat"><div class="stat-val" id="st-meals-bf">—</div><div class="stat-label">朝食</div></div>
+        <div class="stat"><div class="stat-val" id="st-meals-lu">—</div><div class="stat-label">昼食</div></div>
+        <div class="stat"><div class="stat-val" id="st-meals-di">—</div><div class="stat-label">夕食</div></div>
+        <div class="stat"><div class="stat-val" id="st-meals-sn">—</div><div class="stat-label">間食</div></div>
+      </div>
+      <div class="range-row" id="st-meals-range">期間: —</div>
     </div>
-    <div style="display:flex; gap:0.5rem; font-family:var(--mono); font-size:0.72rem; color:var(--text-muted); margin-bottom:0.75rem;" id="st-range">
-      期間: —
+
+    <div class="table-group">
+      <div class="table-label">body_metrics（身体計測）</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-val" id="st-bm-total">—</div><div class="stat-label">総件数</div></div>
+        <div class="stat"><div class="stat-val" id="st-bm-weight">—</div><div class="stat-label">体重</div></div>
+        <div class="stat"><div class="stat-val" id="st-bm-fat">—</div><div class="stat-label">体脂肪率</div></div>
+        <div class="stat"><div class="stat-val" id="st-bm-basal">—</div><div class="stat-label">基礎代謝</div></div>
+      </div>
+      <div class="range-row" id="st-bm-range">期間: —</div>
     </div>
-    <button class="btn btn-primary" onclick="loadStats()">↻ 更新</button>
+
+    <div class="table-group">
+      <div class="table-label">exercises（運動ログ）</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-val" id="st-ex-total">—</div><div class="stat-label">総件数</div></div>
+        <div class="stat"><div class="stat-val" id="st-ex-run">—</div><div class="stat-label">ランニング</div></div>
+        <div class="stat"><div class="stat-val" id="st-ex-walk">—</div><div class="stat-label">ウォーキング</div></div>
+        <div class="stat"><div class="stat-val" id="st-ex-kcal">—</div><div class="stat-label">kcalあり</div></div>
+      </div>
+      <div class="range-row" id="st-ex-range">期間: —</div>
+    </div>
+
+    <div class="table-group">
+      <div class="table-label">daily_logs</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-val" id="st-dl-total">—</div><div class="stat-label">日数</div></div>
+      </div>
+      <div class="range-row" id="st-dl-range">期間: —</div>
+    </div>
+
+    <button class="btn btn-primary btn-sm" onclick="loadStats()">↻ 更新</button>
   </div>
 
-  <!-- 一括削除 -->
+  <!-- ② テーブル削除 -->
   <div class="section">
-    <div class="section-title">⚠ 全件削除</div>
-    <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
-      mealsテーブルの全データを削除します。CSVの再取込前に実行してください。
+    <div class="section-title">⚠ テーブル削除</div>
+    <p class="delete-desc">
+      各テーブルの全データを削除します。daily_logsを削除するとCASCADEで関連データもすべて削除されます。
     </p>
-    <button class="btn btn-danger" onclick="confirmDelete()">全件削除</button>
+    <div class="delete-row">
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('meals')">meals 削除</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('body_metrics')">body_metrics 削除</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('exercises')">exercises 削除</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmDelete('daily_logs')">daily_logs 全削除 (CASCADE)</button>
+    </div>
   </div>
 
-  <!-- CSV一括取込 -->
+  <!-- ③ Notion CSV 取込 -->
   <div class="section">
-    <div class="section-title">CSV 一括取込</div>
-    <div class="file-area" id="file-area">
-      <input type="file" accept=".csv" id="csv-file" onchange="onFileSelect(event)">
-      <p>Notionエクスポート CSVをドロップ or クリックして選択</p>
-      <div class="file-name" id="file-name"></div>
+    <div class="section-title">Notion CSV 取込（meals）</div>
+
+    <div class="file-area">
+      <input type="file" accept=".csv" id="csv-file" onchange="onCsvSelect(event)">
+      <p>Notionエクスポート CSV をドロップ or クリックして選択</p>
+      <div class="file-name" id="csv-file-name"></div>
     </div>
 
     <div class="divider"></div>
 
-    <!-- 日付フィルター -->
-    <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.5rem;">
-      日付フィルター（空欄 = 全件取込）
-    </div>
+    <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">日付フィルター（空欄 = 全件）</div>
     <div class="date-row">
       <label>開始日</label>
-      <input type="date" id="date-from">
+      <input type="date" id="csv-from">
       <label>終了日</label>
-      <input type="date" id="date-to">
-      <button class="btn btn-warn" style="font-size:0.72rem; padding:0.35rem 0.7rem;" onclick="clearDates()">クリア</button>
+      <input type="date" id="csv-to">
+      <button class="btn btn-warn btn-sm" onclick="clearCsvDates()">クリア</button>
     </div>
 
     <div class="action-row">
-      <button class="btn btn-primary" id="import-btn" onclick="startImport()" disabled>取込実行</button>
-      <span style="font-size:0.75rem; color:var(--text-muted);" id="preview-count"></span>
+      <button class="btn btn-primary" id="csv-import-btn" onclick="startCsvImport()" disabled>取込実行</button>
+      <span class="preview-count" id="csv-preview"></span>
     </div>
-
-    <div class="progress-wrap" id="progress-wrap">
-      <div class="progress-bar" id="progress-bar"></div>
-    </div>
-    <div class="log" id="import-log"></div>
+    <div class="progress-wrap" id="csv-progress-wrap"><div class="progress-bar" id="csv-progress-bar"></div></div>
+    <div class="log" id="csv-log"></div>
   </div>
 
 </div>
@@ -327,8 +390,8 @@
 <!-- 削除確認モーダル -->
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
-    <h3>⚠ 全件削除の確認</h3>
-    <p>mealsテーブルの全データを削除します。<br>この操作は取り消せません。</p>
+    <h3>⚠ 削除の確認</h3>
+    <p id="delete-modal-msg">このテーブルの全データを削除します。<br>この操作は取り消せません。</p>
     <div class="modal-btns">
       <button class="btn btn-danger" onclick="executeDelete()">削除する</button>
       <button class="btn" style="border-color:var(--border);color:var(--text-muted);" onclick="closeModal()">キャンセル</button>
@@ -340,143 +403,232 @@
 const SUPABASE_URL = 'https://lvmgfolwipwgyhhzskvj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2bWdmb2x3aXB3Z3loaHpza3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzgxMjQsImV4cCI6MjA5NTkxNDEyNH0.jrnrNWLZDQg2mscPqI-UPg9JrQZhXFkJVELl1TG43Gk';
 
-const headers = {
+const H = {
   'apikey': SUPABASE_KEY,
   'Authorization': `Bearer ${SUPABASE_KEY}`,
   'Content-Type': 'application/json',
-  'Prefer': 'return=minimal'
 };
 
-let parsedRows = [];
-
-// ── Stats ──────────────────────────────────────────
+// ━━ Stats ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function loadStats() {
+  await Promise.all([loadMealsStats(), loadBmStats(), loadExStats(), loadDlStats()]);
+}
+
+async function loadMealsStats() {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/meals_summary`, {
-      method: 'POST', headers
-    });
-    // fallback: direct query
-    const q = await fetch(
-      `${SUPABASE_URL}/rest/v1/meals?select=meal_type,eaten_at`,
-      { headers: { ...headers, 'Prefer': '' } }
-    );
-    const rows = await q.json();
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/meals?select=meal_type,measured_at`, { headers: H });
+    const rows = await r.json();
+    if (!Array.isArray(rows)) { setStats('meals', '!'); return; }
     const total = rows.length;
-    const bf = rows.filter(r => r.meal_type === 'breakfast').length;
-    const lu = rows.filter(r => r.meal_type === 'lunch').length;
-    const di = rows.filter(r => r.meal_type === 'dinner').length;
-    document.getElementById('st-total').textContent = total;
-    document.getElementById('st-breakfast').textContent = bf;
-    document.getElementById('st-lunch').textContent = lu;
-    document.getElementById('st-dinner').textContent = di;
+    document.getElementById('st-meals-total').textContent = total;
+    document.getElementById('st-meals-bf').textContent = rows.filter(r=>r.meal_type==='breakfast').length;
+    document.getElementById('st-meals-lu').textContent = rows.filter(r=>r.meal_type==='lunch').length;
+    document.getElementById('st-meals-di').textContent = rows.filter(r=>r.meal_type==='dinner').length;
+    document.getElementById('st-meals-sn').textContent = rows.filter(r=>r.meal_type==='snack').length;
     if (total > 0) {
-      const dates = rows.map(r => r.eaten_at).sort();
-      const from = dates[0].slice(0,10);
-      const to   = dates[dates.length-1].slice(0,10);
-      document.getElementById('st-range').textContent = `期間: ${from} 〜 ${to}`;
+      const dates = rows.map(r=>r.measured_at).sort();
+      document.getElementById('st-meals-range').textContent =
+        `期間: ${dates[0].slice(0,10)} 〜 ${dates[dates.length-1].slice(0,10)}`;
+    }
+  } catch(e) { document.getElementById('st-meals-total').textContent = 'ERR'; }
+}
+
+async function loadBmStats() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/body_metrics?select=measured_at,weight_kg,body_fat_pct,basal_metabolism_kcal`, { headers: H });
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return;
+    document.getElementById('st-bm-total').textContent  = rows.length;
+    document.getElementById('st-bm-weight').textContent = rows.filter(r=>r.weight_kg!=null).length;
+    document.getElementById('st-bm-fat').textContent    = rows.filter(r=>r.body_fat_pct!=null).length;
+    document.getElementById('st-bm-basal').textContent  = rows.filter(r=>r.basal_metabolism_kcal!=null).length;
+    if (rows.length > 0) {
+      const dates = rows.map(r=>r.measured_at).sort();
+      document.getElementById('st-bm-range').textContent =
+        `期間: ${dates[0].slice(0,10)} 〜 ${dates[dates.length-1].slice(0,10)}`;
+    }
+  } catch(e) { document.getElementById('st-bm-total').textContent = 'ERR'; }
+}
+
+async function loadExStats() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/exercises?select=measured_at,exercise_type,burned_kcal`, { headers: H });
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return;
+    document.getElementById('st-ex-total').textContent = rows.length;
+    document.getElementById('st-ex-run').textContent   = rows.filter(r=>r.exercise_type==='ランニング').length;
+    document.getElementById('st-ex-walk').textContent  = rows.filter(r=>r.exercise_type==='ウォーキング').length;
+    document.getElementById('st-ex-kcal').textContent  = rows.filter(r=>r.burned_kcal!=null).length;
+    if (rows.length > 0) {
+      const dates = rows.map(r=>r.measured_at).sort();
+      document.getElementById('st-ex-range').textContent =
+        `期間: ${dates[0].slice(0,10)} 〜 ${dates[dates.length-1].slice(0,10)}`;
+    }
+  } catch(e) { document.getElementById('st-ex-total').textContent = 'ERR'; }
+}
+
+async function loadDlStats() {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/daily_logs?select=target_date`, { headers: H });
+    const rows = await r.json();
+    if (!Array.isArray(rows)) return;
+    document.getElementById('st-dl-total').textContent = rows.length;
+    if (rows.length > 0) {
+      const dates = rows.map(r=>r.target_date).sort();
+      document.getElementById('st-dl-range').textContent =
+        `期間: ${dates[0]} 〜 ${dates[dates.length-1]}`;
+    }
+  } catch(e) { document.getElementById('st-dl-total').textContent = 'ERR'; }
+}
+
+// ━━ Delete ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let deleteTarget = null;
+const DELETE_MSGS = {
+  meals:        'mealsテーブルの全データを削除します。\nこの操作は取り消せません。',
+  body_metrics: 'body_metricsテーブルの全データを削除します。\nこの操作は取り消せません。',
+  exercises:    'exercisesテーブルの全データを削除します。\nこの操作は取り消せません。',
+  daily_logs:   'daily_logsを削除するとCASCADEで\nmeals / body_metrics / exercises\nの全データも削除されます。',
+};
+
+function confirmDelete(table) {
+  deleteTarget = table;
+  document.getElementById('delete-modal-msg').textContent = DELETE_MSGS[table] || '';
+  document.getElementById('delete-modal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('delete-modal').classList.remove('show');
+  deleteTarget = null;
+}
+async function executeDelete() {
+  if (!deleteTarget) return;
+  closeModal();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${deleteTarget}?id=gte.0`, {
+      method: 'DELETE', headers: H
+    });
+    if (res.ok) {
+      alert(`${deleteTarget} を削除しました`);
+      loadStats();
     } else {
-      document.getElementById('st-range').textContent = '期間: データなし';
+      alert('削除エラー: ' + await res.text());
     }
   } catch(e) {
-    document.getElementById('st-total').textContent = 'ERR';
-    console.error(e);
+    alert('ネットワークエラー: ' + e.message);
   }
 }
 
-// ── CSV Parse ──────────────────────────────────────
+// ━━ Notion CSV Parser ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const MEAL_MAP = { '朝食':'breakfast','昼食':'lunch','夕食':'dinner','間食':'snack' };
 
-function parseDatetime(s) {
-  s = s.trim();
-  const m = s.match(/(\d+)年(\d+)月(\d+)日(?:\s+(\d+):00\s*\(JST\))?/);
+function parseNotionDatetime(s) {
+  s = (s || '').trim();
+  // "2026年5月12日" or "2026年5月12日 7:00 (JST)"
+  const m = s.match(/(\d+)年(\d+)月(\d+)日(?:\s+(\d+):00\s*(?:\(JST\))?)?/);
   if (!m) return null;
   const [,y,mo,d,h] = m;
   return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}T${(h||'00').padStart(2,'0')}:00:00+09:00`;
 }
 
-function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim());
-  const header = lines[0].split(',');
+function parseCSVLine(line) {
+  // RFC4180準拠の簡易CSVパーサ（ダブルクォート対応）
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { cols.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  cols.push(cur);
+  return cols;
+}
+
+function parseNotionCSV(text) {
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
-    // naive split (Notion CSV doesn't quote fields typically)
-    const cols = lines[i].split(',');
-    if (cols.length < 2) continue;
-    const eaten_at = parseDatetime(cols[0]);
-    if (!eaten_at) continue;
-    const meal_type = MEAL_MAP[cols[1]?.trim()] || 'snack';
-    const menu_name  = cols[2]?.trim() || null;
-    const content    = cols[3]?.trim() || null;
-    const weight_g   = parseFloat(cols[4]) || null;
-    const cal        = parseFloat(cols[5]) || null;
-    const protein_g  = parseFloat(cols[6]) || null;
-    const fat_g      = parseFloat(cols[7]) || null;
-    const carbs_g    = parseFloat(cols[8]) || null;
-    rows.push({ eaten_at, meal_type,
-      menu_name: menu_name || null,
-      content:   content   || null,
-      weight_g, calories_kcal: cal, protein_g, fat_g, carbs_g
-    });
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols = parseCSVLine(line);
+    const measured_at = parseNotionDatetime(cols[0]);
+    if (!measured_at) continue;
+    const meal_type    = MEAL_MAP[cols[1]?.trim()] || 'snack';
+    const menu_name    = cols[2]?.trim() || null;
+    const content      = cols[3]?.trim() || null;
+    const weight_g     = parseFloat(cols[4]) || null;
+    const calories_kcal= parseFloat(cols[5]) || null;
+    const protein_g    = parseFloat(cols[6]) || null;
+    const fat_g        = parseFloat(cols[7]) || null;
+    const carbs_g      = parseFloat(cols[8]) || null;
+    rows.push({ measured_at, meal_type, menu_name, content,
+                weight_g, calories_kcal, protein_g, fat_g, carbs_g });
   }
   return rows;
 }
 
-function onFileSelect(e) {
+let csvRows = [];
+
+function onCsvSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
-  document.getElementById('file-name').textContent = file.name;
+  document.getElementById('csv-file-name').textContent = file.name;
   const reader = new FileReader();
   reader.onload = ev => {
-    parsedRows = parseCSV(ev.target.result);
-    updatePreview();
-    document.getElementById('import-btn').disabled = false;
+    csvRows = parseNotionCSV(ev.target.result);
+    updateCsvPreview();
+    document.getElementById('csv-import-btn').disabled = false;
   };
   reader.readAsText(file, 'UTF-8');
 }
 
-function getFilteredRows() {
-  const from = document.getElementById('date-from').value;
-  const to   = document.getElementById('date-to').value;
-  return parsedRows.filter(r => {
-    const d = r.eaten_at.slice(0,10);
+function getCsvFiltered() {
+  const from = document.getElementById('csv-from').value;
+  const to   = document.getElementById('csv-to').value;
+  return csvRows.filter(r => {
+    const d = r.measured_at.slice(0,10);
     if (from && d < from) return false;
     if (to   && d > to)   return false;
     return true;
   });
 }
 
-function updatePreview() {
-  const filtered = getFilteredRows();
-  document.getElementById('preview-count').textContent =
-    `取込予定: ${filtered.length} 件 / CSV全体: ${parsedRows.length} 件`;
+function updateCsvPreview() {
+  const f = getCsvFiltered();
+  document.getElementById('csv-preview').textContent =
+    `取込予定: ${f.length} 件 / CSV全体: ${csvRows.length} 件`;
 }
 
-function clearDates() {
-  document.getElementById('date-from').value = '';
-  document.getElementById('date-to').value = '';
-  updatePreview();
+function clearCsvDates() {
+  document.getElementById('csv-from').value = '';
+  document.getElementById('csv-to').value   = '';
+  updateCsvPreview();
 }
 
-document.getElementById('date-from').addEventListener('change', updatePreview);
-document.getElementById('date-to').addEventListener('change', updatePreview);
+document.getElementById('csv-from').addEventListener('change', updateCsvPreview);
+document.getElementById('csv-to').addEventListener('change',   updateCsvPreview);
 
-// ── Import ─────────────────────────────────────────
-async function startImport() {
-  const rows = getFilteredRows();
+async function startCsvImport() {
+  const rows = getCsvFiltered();
   if (!rows.length) { alert('取込対象がありません'); return; }
 
-  const btn = document.getElementById('import-btn');
+  const btn = document.getElementById('csv-import-btn');
   btn.disabled = true;
   btn.textContent = '取込中...';
 
-  const pw = document.getElementById('progress-wrap');
-  const pb = document.getElementById('progress-bar');
-  const logEl = document.getElementById('import-log');
-  pw.style.display = 'block';
-  logEl.style.display = 'block';
-  logEl.innerHTML = '';
+  const pw  = document.getElementById('csv-progress-wrap');
+  const pb  = document.getElementById('csv-progress-bar');
+  const log = document.getElementById('csv-log');
+  pw.style.display  = 'block';
+  log.style.display = 'block';
+  log.innerHTML = '';
 
-  let inserted = 0, skipped = 0, errors = 0;
+  let inserted = 0, errors = 0;
   const CHUNK = 50;
 
   for (let i = 0; i < rows.length; i += CHUNK) {
@@ -484,63 +636,37 @@ async function startImport() {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/meals`, {
         method: 'POST',
-        headers: { ...headers, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
-        body: JSON.stringify(chunk)
+        headers: { ...H, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
+        body: JSON.stringify(chunk),
       });
       if (res.ok) {
         inserted += chunk.length;
-        appendLog(`✓ ${i+1}〜${Math.min(i+CHUNK, rows.length)} 件目 INSERT OK`, 'ok');
+        appendLog('csv-log', `✓ ${i+1}〜${Math.min(i+CHUNK,rows.length)} 件 OK`, 'ok');
       } else {
-        const err = await res.text();
         errors += chunk.length;
-        appendLog(`✗ エラー: ${err}`, 'err');
+        appendLog('csv-log', `✗ エラー: ${await res.text()}`, 'err');
       }
     } catch(e) {
       errors += chunk.length;
-      appendLog(`✗ ネットワークエラー: ${e.message}`, 'err');
+      appendLog('csv-log', `✗ ネットワークエラー: ${e.message}`, 'err');
     }
-    pb.style.width = Math.round((Math.min(i+CHUNK, rows.length)) / rows.length * 100) + '%';
+    pb.style.width = Math.round(Math.min(i+CHUNK,rows.length)/rows.length*100) + '%';
   }
 
-  appendLog('', 'info');
-  appendLog(`完了 — 取込: ${inserted}件 / エラー: ${errors}件`, inserted > 0 ? 'ok' : 'err');
+  appendLog('csv-log', `完了 — 取込: ${inserted}件 / エラー: ${errors}件`, inserted > 0 ? 'ok' : 'err');
   btn.textContent = '取込実行';
   btn.disabled = false;
-  loadStats();
+  loadMealsStats();
 }
 
-function appendLog(msg, cls) {
-  const el = document.getElementById('import-log');
+// ━━ Util ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function appendLog(id, msg, cls) {
+  const el = document.getElementById(id);
   el.innerHTML += `<div class="log-${cls}">${msg}</div>`;
   el.scrollTop = el.scrollHeight;
 }
 
-// ── Delete ─────────────────────────────────────────
-function confirmDelete() {
-  document.getElementById('delete-modal').classList.add('show');
-}
-function closeModal() {
-  document.getElementById('delete-modal').classList.remove('show');
-}
-async function executeDelete() {
-  closeModal();
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/meals?id=gte.0`, {
-      method: 'DELETE', headers
-    });
-    if (res.ok) {
-      alert('全件削除しました');
-      loadStats();
-    } else {
-      const e = await res.text();
-      alert('削除エラー: ' + e);
-    }
-  } catch(e) {
-    alert('ネットワークエラー: ' + e.message);
-  }
-}
-
-// ── Init ───────────────────────────────────────────
+// ━━ Init ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 loadStats();
 </script>
 </body>
