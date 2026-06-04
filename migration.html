@@ -503,14 +503,18 @@ async function executeDelete() {
   if (!deleteTarget) return;
   closeModal();
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${deleteTarget}?id=gte.0`, {
-      method: 'DELETE', headers: H
-    });
+    // Supabase REST API: 全件削除には created_at フィルターを使用
+    // (フィルターなしDELETEはAPIレベルでブロックされるため)
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${deleteTarget}?created_at=gte.2000-01-01`,
+      { method: 'DELETE', headers: H }
+    );
     if (res.ok) {
       alert(`${deleteTarget} を削除しました`);
       loadStats();
     } else {
-      alert('削除エラー: ' + await res.text());
+      const errText = await res.text();
+      alert('削除エラー: ' + errText);
     }
   } catch(e) {
     alert('ネットワークエラー: ' + e.message);
