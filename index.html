@@ -71,7 +71,7 @@
             <button class="chart-period-tab" data-days="180">180日</button>
           </div>
         </div>
-        <div style="position:relative;height:260px">
+        <div style="position:relative;height:300px">
           <canvas id="trend-chart"></canvas>
         </div>
       </div>
@@ -89,14 +89,14 @@
     </div>
   </main>
 
-  <!-- Chart.js -->
+  <!-- Chart.js (UMD: window.Chart として利用) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+  <!-- グラフモジュール（window.refreshCharts を先に定義） -->
+  <script type="module" src="js/modules/charts.js"></script>
 
   <!-- アプリ本体 -->
   <script type="module" src="js/app.js"></script>
-
-  <!-- グラフモジュール (Phase 5 で js/modules/charts.js に切り出し予定) -->
-  <script type="module" src="js/modules/charts.js"></script>
 
 </body>
 </html>
