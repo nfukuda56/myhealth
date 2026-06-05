@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>myhealth</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ヘッダ: ロゴ + 日付ナビ + サインアウト -->
+  <header class="app-header">
+    <div style="display:flex;align-items:center;gap:20px">
+      <span class="logo">myhealth</span>
+      <nav class="date-nav">
+        <button id="prev-btn" class="date-nav-btn" title="前日">‹</button>
+        <span id="date-display" class="date-display">—</span>
+        <button id="next-btn" class="date-nav-btn" title="翌日">›</button>
+        <button id="today-btn" class="today-btn">今日</button>
+      </nav>
+    </div>
+    <button id="signout-btn" class="signout-btn">サインアウト</button>
+  </header>
+
+  <!-- メイン: 2カラム -->
+  <main class="app-main">
+
+    <!-- 左カラム: サマリー + (入力フォームは後フェーズ) -->
+    <div class="col-left">
+
+      <!-- 日次サマリー -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Daily Summary</span>
+        </div>
+        <div id="summary-content">
+          <div class="loading">読み込み中...</div>
+        </div>
+      </div>
+
+      <!-- タイムライン (モバイルでは左カラムに表示) -->
+      <div class="card" id="timeline-card-left" style="display:none">
+        <div class="card-header">
+          <span class="card-title">Timeline</span>
+        </div>
+        <div id="timeline-content-left"></div>
+      </div>
+
+    </div>
+
+    <!-- 右カラム: グラフ + タイムライン -->
+    <div class="col-right">
+
+      <!-- グラフエリア -->
+      <div class="card">
+        <div class="card-header">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span class="card-title">Trend</span>
+            <div class="chart-tabs" id="chart-tabs">
+              <button class="chart-tab active" data-metric="weight">体重</button>
+              <button class="chart-tab" data-metric="body_fat_pct">体脂肪率</button>
+              <button class="chart-tab" data-metric="fat_mass">体脂肪量</button>
+              <button class="chart-tab" data-metric="lean_body_mass">除脂肪体重</button>
+              <button class="chart-tab" data-metric="balance">収支</button>
+            </div>
+          </div>
+          <div class="chart-period-tabs" id="period-tabs">
+            <button class="chart-period-tab" data-days="7">7日</button>
+            <button class="chart-period-tab active" data-days="30">30日</button>
+            <button class="chart-period-tab" data-days="90">90日</button>
+            <button class="chart-period-tab" data-days="180">180日</button>
+          </div>
+        </div>
+        <div style="position:relative;height:260px">
+          <canvas id="trend-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- タイムライン (PCでは右カラムに表示) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Timeline</span>
+        </div>
+        <div id="timeline-content">
+          <div class="loading">読み込み中...</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+  <!-- アプリ本体 -->
+  <script type="module" src="js/app.js"></script>
+
+  <!-- グラフモジュール (Phase 5 で js/modules/charts.js に切り出し予定) -->
+  <script type="module" src="js/modules/charts.js"></script>
+
+</body>
+</html>
