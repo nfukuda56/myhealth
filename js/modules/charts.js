@@ -66,7 +66,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
   )
 
   return {
-    type: 'bar',
+    type: 'line',
     data: {
       labels,
       datasets: [
@@ -154,6 +154,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
         // 左軸: 体組成指標
         y1: {
           position: 'left',
+          display: true,
           ticks: {
             color: color.line,
             font: { family: "'DM Mono', monospace", size: 10 },
@@ -168,6 +169,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
         // 右軸: カロリー収支（0を中心に対称）
         y2: {
           position: 'right',
+          display: true,
           ticks: {
             color: '#a78bfa',
             font: { family: "'DM Mono', monospace", size: 10 },
@@ -176,6 +178,12 @@ function buildChartConfig(labels, metricValues, balanceValues) {
           grid: { drawOnChartArea: false },
           border: { color: '#2a2d3a' },
           afterDataLimits(scale) {
+            // データが全nullの場合 Infinity になるのを防ぐ
+            if (!isFinite(scale.min) || !isFinite(scale.max)) {
+              scale.min = -500
+              scale.max = 500
+              return
+            }
             const abs = Math.max(Math.abs(scale.min), Math.abs(scale.max), 1)
             scale.min = -abs
             scale.max = abs
@@ -187,6 +195,26 @@ function buildChartConfig(labels, metricValues, balanceValues) {
 }
 
 // =============================================
+// エラー表示ヘルパー（canvasを破壊しない）
+// =============================================
+function showChartError(wrapper, message) {
+  let errEl = wrapper.querySelector('.chart-error-overlay')
+  if (!errEl) {
+    errEl = document.createElement('div')
+    errEl.className = 'chart-error-overlay'
+    errEl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#f87171;font-size:13px;background:rgba(10,12,20,0.8);border-radius:8px;padding:12px;text-align:center'
+    wrapper.appendChild(errEl)
+  }
+  errEl.textContent = message
+  errEl.style.display = 'flex'
+}
+
+function hideChartError(wrapper) {
+  const errEl = wrapper.querySelector('.chart-error-overlay')
+  if (errEl) errEl.style.display = 'none'
+}
+
+// =============================================
 // グラフ描画
 // =============================================
 async function renderChart(endDate) {
@@ -194,11 +222,14 @@ async function renderChart(endDate) {
   if (!canvas) return
 
   const wrapper = canvas.parentElement
+  hideChartError(wrapper)
+
+  // ローディング表示
   let loader = wrapper.querySelector('.chart-loader')
   if (!loader) {
     loader = document.createElement('div')
-    loader.className = 'chart-loader loading'
-    loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center'
+    loader.className = 'chart-loader'
+    loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px'
     wrapper.appendChild(loader)
   }
   loader.textContent = '読み込み中...'
@@ -239,14 +270,11 @@ async function renderChart(endDate) {
     }
 
     const cfg = buildChartConfig(labels, metricValues, balanceValues)
-    chartInstance = new Chart(canvas, cfg)
+    chartInstance = new window.Chart(canvas, cfg)
 
   } catch (err) {
     console.error('Chart error:', err)
-    if (chartInstance) { chartInstance.destroy(); chartInstance = null }
-    canvas.parentElement.innerHTML =
-      `<div class="error-msg" style="margin:16px">グラフ取得エラー: ${err.message}</div>`
-    return
+    showChartError(wrapper, `グラフ取得エラー: ${err.message}`)
   } finally {
     loader.style.display = 'none'
   }
@@ -257,32 +285,4 @@ async function renderChart(endDate) {
 // =============================================
 function initTabs() {
   document.getElementById('chart-tabs')?.addEventListener('click', e => {
-    const btn = e.target.closest('.chart-tab')
-    if (!btn) return
-    document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'))
-    btn.classList.add('active')
-    currentMetric = btn.dataset.metric
-    if (currentEndDate) renderChart(currentEndDate)
-  })
-
-  document.getElementById('period-tabs')?.addEventListener('click', e => {
-    const btn = e.target.closest('.chart-period-tab')
-    if (!btn) return
-    document.querySelectorAll('.chart-period-tab').forEach(b => b.classList.remove('active'))
-    btn.classList.add('active')
-    currentPeriod = Number(btn.dataset.days)
-    if (currentEndDate) renderChart(currentEndDate)
-  })
-}
-
-// =============================================
-// 外部インターフェース
-// app.js から window.refreshCharts(dateStr) で呼び出す
-// =============================================
-window.refreshCharts = async (dateStr) => {
-  currentEndDate = dateStr
-  await renderChart(dateStr)
-}
-
-document.addEventListener('DOMContentLoaded', initTabs)
-if (document.readyState !== 'load
+    c
