@@ -61,13 +61,13 @@ function parseNotionCSV(text) {
 let csvRows = []
 
 // =============================================
-// モーダル開閉
+// モーダル開閉 — overlay に .show を付ける
 // =============================================
 function openImportModal() {
-  document.getElementById('import-modal').classList.add('show')
+  document.getElementById('import-modal-overlay').classList.add('show')
 }
 function closeImportModal() {
-  document.getElementById('import-modal').classList.remove('show')
+  document.getElementById('import-modal-overlay').classList.remove('show')
 }
 
 // =============================================
@@ -143,10 +143,9 @@ async function startImport() {
 
   appendLog(`完了 — 取込: ${inserted}件 / エラー: ${errors}件`, inserted > 0 ? 'ok' : 'err')
 
-  // ログイン中なのでバックフィルも実行
   const { data: bfData, error: bfErr } = await supabase.rpc('run_user_backfill')
   if (bfErr) appendLog(`[backfill] エラー: ${bfErr.message}`, 'warn')
-  else appendLog(`[backfill] user_id/daily_log_id 付与完了: ${JSON.stringify(bfData)}`, 'info')
+  else appendLog(`[backfill] 完了: ${JSON.stringify(bfData)}`, 'info')
 
   btn.textContent = '取込実行'
   btn.disabled = false
@@ -159,38 +158,19 @@ function appendLog(msg, cls) {
 }
 
 // =============================================
-// 初期化
+// 初期化 — ES module は defer 済みなので即時実行
 // =============================================
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('import-open-btn')?.addEventListener('click', openImportModal)
-  document.getElementById('import-close-btn')?.addEventListener('click', closeImportModal)
-  document.getElementById('import-modal-overlay')?.addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeImportModal()
-  })
-  document.getElementById('import-csv-file')?.addEventListener('change', onCsvSelect)
-  document.getElementById('import-from')?.addEventListener('change', updatePreview)
-  document.getElementById('import-to')?.addEventListener('change',   updatePreview)
-  document.getElementById('import-clear-dates')?.addEventListener('click', () => {
-    document.getElementById('import-from').value = ''
-    document.getElementById('import-to').value   = ''
-    updatePreview()
-  })
-  document.getElementById('import-exec-btn')?.addEventListener('click', startImport)
+document.getElementById('import-open-btn').addEventListener('click', openImportModal)
+document.getElementById('import-close-btn').addEventListener('click', closeImportModal)
+document.getElementById('import-modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeImportModal()
 })
-if (document.readyState !== 'loading') {
-  // already loaded, run immediately
-  document.getElementById('import-open-btn')?.addEventListener('click', openImportModal)
-  document.getElementById('import-close-btn')?.addEventListener('click', closeImportModal)
-  document.getElementById('import-modal-overlay')?.addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeImportModal()
-  })
-  document.getElementById('import-csv-file')?.addEventListener('change', onCsvSelect)
-  document.getElementById('import-from')?.addEventListener('change', updatePreview)
-  document.getElementById('import-to')?.addEventListener('change',   updatePreview)
-  document.getElementById('import-clear-dates')?.addEventListener('click', () => {
-    document.getElementById('import-from').value = ''
-    document.getElementById('import-to').value   = ''
-    updatePreview()
-  })
-  document.getElementById('import-exec-btn')?.addEventListener('click', startImport)
-}
+document.getElementById('import-csv-file').addEventListener('change', onCsvSelect)
+document.getElementById('import-from').addEventListener('change', updatePreview)
+document.getElementById('import-to').addEventListener('change', updatePreview)
+document.getElementById('import-clear-dates').addEventListener('click', () => {
+  document.getElementById('import-from').value = ''
+  document.getElementById('import-to').value   = ''
+  updatePreview()
+})
+document.getElementById('import-exec-btn').addEventListener('click', startImport)
