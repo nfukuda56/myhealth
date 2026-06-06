@@ -66,6 +66,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
   )
 
   return {
+    type: 'bar',
     data: {
       labels,
       datasets: [
@@ -284,4 +285,4 @@ window.refreshCharts = async (dateStr) => {
 }
 
 document.addEventListener('DOMContentLoaded', initTabs)
-if (document.readyState !== 'loading') initTabs()
+if (document.readyState !== 'load
