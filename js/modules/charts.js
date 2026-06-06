@@ -52,17 +52,13 @@ async function fetchData(endDate, periodDays) {
 }
 
 // =============================================
-// Chart.js 設定（混合: 折れ線 + 棒グラフ）
+// Chart.js 設定（折れ線 + 収支棒グラフ）
 // =============================================
 function buildChartConfig(labels, metricValues, balanceValues) {
   const color = COLORS[currentMetric]
 
-  // 収支バーの色: 正 = 赤(カロリー余剰)、負 = 緑(カロリー不足)
   const barColors = balanceValues.map(v =>
-    v == null ? 'transparent' : v > 0 ? 'rgba(248,113,113,0.65)' : 'rgba(74,222,128,0.65)'
-  )
-  const barBorderColors = balanceValues.map(v =>
-    v == null ? 'transparent' : v > 0 ? '#f87171' : '#4ade80'
+    v == null ? 'transparent' : v > 0 ? 'rgba(248,113,113,0.6)' : 'rgba(74,222,128,0.6)'
   )
 
   return {
@@ -70,18 +66,15 @@ function buildChartConfig(labels, metricValues, balanceValues) {
     data: {
       labels,
       datasets: [
-        // 収支バー（奥に描画されるよう order を大きく）
         {
           type: 'bar',
-          label: 'カロリー収支 (kcal)',
+          label: '収支 (kcal)',
           data: balanceValues,
           backgroundColor: barColors,
-          borderColor: barBorderColors,
-          borderWidth: 1,
-          yAxisID: 'y2',
+          borderWidth: 0,
+          yAxisID: 'yRight',
           order: 2,
         },
-        // 体組成指標ライン（手前）
         {
           type: 'line',
           label: METRIC_LABEL[currentMetric],
@@ -96,7 +89,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
           fill: true,
           tension: 0.3,
           spanGaps: true,
-          yAxisID: 'y1',
+          yAxisID: 'y',
           order: 1,
         },
       ]
@@ -125,7 +118,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
             label: ctx => {
               if (ctx.parsed.y == null) return null
               const v = ctx.parsed.y
-              if (ctx.dataset.yAxisID === 'y2') {
+              if (ctx.dataset.yAxisID === 'yRight') {
                 return ` 収支: ${v > 0 ? '+' : ''}${v} kcal`
               }
               if (currentMetric === 'body_fat_pct') return ` ${v} %`
@@ -133,7 +126,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
             },
             labelColor: ctx => ({
               borderColor: 'transparent',
-              backgroundColor: ctx.dataset.yAxisID === 'y2'
+              backgroundColor: ctx.dataset.yAxisID === 'yRight'
                 ? (ctx.parsed.y > 0 ? '#f87171' : '#4ade80')
                 : color.line
             })
@@ -151,25 +144,18 @@ function buildChartConfig(labels, metricValues, balanceValues) {
           grid: { color: '#1e2130' },
           border: { color: '#2a2d3a' }
         },
-        // 左軸: 体組成指標
-        y1: {
+        y: {
           position: 'left',
-          display: true,
           ticks: {
             color: color.line,
             font: { family: "'DM Mono', monospace", size: 10 },
-            callback: v => {
-              if (currentMetric === 'body_fat_pct') return v + '%'
-              return v + 'kg'
-            }
+            callback: v => currentMetric === 'body_fat_pct' ? v + '%' : v + 'kg'
           },
           grid: { color: '#1e2130' },
           border: { color: '#2a2d3a' },
         },
-        // 右軸: カロリー収支（0を中心に対称）
-        y2: {
+        yRight: {
           position: 'right',
-          display: true,
           ticks: {
             color: '#a78bfa',
             font: { family: "'DM Mono', monospace", size: 10 },
@@ -177,41 +163,10 @@ function buildChartConfig(labels, metricValues, balanceValues) {
           },
           grid: { drawOnChartArea: false },
           border: { color: '#2a2d3a' },
-          afterDataLimits(scale) {
-            // データが全nullの場合 Infinity になるのを防ぐ
-            if (!isFinite(scale.min) || !isFinite(scale.max)) {
-              scale.min = -500
-              scale.max = 500
-              return
-            }
-            const abs = Math.max(Math.abs(scale.min), Math.abs(scale.max), 1)
-            scale.min = -abs
-            scale.max = abs
-          }
         }
       }
     }
   }
-}
-
-// =============================================
-// エラー表示ヘルパー（canvasを破壊しない）
-// =============================================
-function showChartError(wrapper, message) {
-  let errEl = wrapper.querySelector('.chart-error-overlay')
-  if (!errEl) {
-    errEl = document.createElement('div')
-    errEl.className = 'chart-error-overlay'
-    errEl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#f87171;font-size:13px;background:rgba(10,12,20,0.8);border-radius:8px;padding:12px;text-align:center'
-    wrapper.appendChild(errEl)
-  }
-  errEl.textContent = message
-  errEl.style.display = 'flex'
-}
-
-function hideChartError(wrapper) {
-  const errEl = wrapper.querySelector('.chart-error-overlay')
-  if (errEl) errEl.style.display = 'none'
 }
 
 // =============================================
@@ -222,18 +177,27 @@ async function renderChart(endDate) {
   if (!canvas) return
 
   const wrapper = canvas.parentElement
-  hideChartError(wrapper)
 
-  // ローディング表示
+  // ローディング
   let loader = wrapper.querySelector('.chart-loader')
   if (!loader) {
     loader = document.createElement('div')
     loader.className = 'chart-loader'
-    loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px'
+    loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px;pointer-events:none'
     wrapper.appendChild(loader)
   }
   loader.textContent = '読み込み中...'
   loader.style.display = 'flex'
+
+  // エラー表示要素（canvasを破棄しない）
+  let errEl = wrapper.querySelector('.chart-err')
+  if (!errEl) {
+    errEl = document.createElement('div')
+    errEl.className = 'chart-err'
+    errEl.style.cssText = 'position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#f87171;font-size:13px;padding:12px;text-align:center'
+    wrapper.appendChild(errEl)
+  }
+  errEl.style.display = 'none'
 
   try {
     const { bodyData, balanceData } = await fetchData(endDate, currentPeriod)
@@ -251,12 +215,12 @@ async function renderChart(endDate) {
 
       const bodyRow = bodyMap.get(cur)
       metricValues.push(
-        bodyRow && bodyRow[currentMetric] != null ? Number(bodyRow[currentMetric]) : null
+        bodyRow?.[currentMetric] != null ? Number(bodyRow[currentMetric]) : null
       )
 
       const balRow = balanceMap.get(cur)
       balanceValues.push(
-        balRow && balRow.balance != null ? Math.round(Number(balRow.balance)) : null
+        balRow?.balance != null ? Math.round(Number(balRow.balance)) : null
       )
 
       const d = new Date(cur + 'T12:00:00+09:00')
@@ -269,12 +233,12 @@ async function renderChart(endDate) {
       chartInstance = null
     }
 
-    const cfg = buildChartConfig(labels, metricValues, balanceValues)
-    chartInstance = new window.Chart(canvas, cfg)
+    chartInstance = new Chart(canvas, buildChartConfig(labels, metricValues, balanceValues))
 
   } catch (err) {
-    console.error('Chart error:', err)
-    showChartError(wrapper, `グラフ取得エラー: ${err.message}`)
+    console.error('[charts] renderChart error:', err)
+    errEl.textContent = `グラフ取得エラー: ${err.message}`
+    errEl.style.display = 'flex'
   } finally {
     loader.style.display = 'none'
   }
@@ -285,4 +249,32 @@ async function renderChart(endDate) {
 // =============================================
 function initTabs() {
   document.getElementById('chart-tabs')?.addEventListener('click', e => {
-    c
+    const btn = e.target.closest('.chart-tab')
+    if (!btn) return
+    document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    currentMetric = btn.dataset.metric
+    if (currentEndDate) renderChart(currentEndDate)
+  })
+
+  document.getElementById('period-tabs')?.addEventListener('click', e => {
+    const btn = e.target.closest('.chart-period-tab')
+    if (!btn) return
+    document.querySelectorAll('.chart-period-tab').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    currentPeriod = Number(btn.dataset.days)
+    if (currentEndDate) renderChart(currentEndDate)
+  })
+}
+
+// =============================================
+// 外部インターフェース
+// =============================================
+window.refreshCharts = async (dateStr) => {
+  currentEndDate = dateStr
+  await renderChart(dateStr)
+}
+
+document.addEventListener('DOMContentLoaded', initTabs)
+if (document.readyState !== 'loading') initTabs()
+                                                                                                                                                                                                                                                                                                                                                                                                         
