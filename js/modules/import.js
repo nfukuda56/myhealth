@@ -128,7 +128,7 @@ async function startImport() {
     const chunk = rows.slice(i, i + CHUNK)
     const { error } = await supabase
       .from('meals')
-      .upsert(chunk, { onConflict: 'measured_at,meal_type', ignoreDuplicates: true })
+      .insert(chunk)
 
     const end = Math.min(i + CHUNK, rows.length)
     if (error) {
