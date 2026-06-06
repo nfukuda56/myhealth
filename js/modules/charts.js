@@ -8,7 +8,6 @@ const COLORS = {
   body_fat_pct:   { line: '#fbbf24', fill: 'rgba(251,191,36,0.08)' },
   fat_mass:       { line: '#f87171', fill: 'rgba(248,113,113,0.08)' },
   lean_body_mass: { line: '#60a5fa', fill: 'rgba(96,165,250,0.08)' },
-  balance:        { line: '#a78bfa', fill: 'rgba(167,139,250,0.08)' },
 }
 
 const METRIC_LABEL = {
@@ -16,7 +15,6 @@ const METRIC_LABEL = {
   body_fat_pct:   '体脂肪率 (%)',
   fat_mass:       '体脂肪量 (kg)',
   lean_body_mass: '除脂肪体重 (kg)',
-  balance:        'カロリー収支 (kcal)',
 }
 
 // =============================================
@@ -42,60 +40,65 @@ function formatDateShort(dateStr) {
 }
 
 // =============================================
-// データ取得
+// データ取得（体組成 + 収支 を並行取得）
 // =============================================
 async function fetchData(endDate, periodDays) {
   const startDate = subtractDays(endDate, periodDays - 1)
-  if (currentMetric === 'balance') {
-    return await getCalorieBalanceTrend(startDate, endDate)
-  } else {
-    return await getBodyTrend(startDate, endDate)
-  }
-}
-
-function extractValues(data) {
-  if (currentMetric === 'balance') {
-    return data.map(d => ({
-      x: d.target_date,
-      y: d.balance != null ? Math.round(Number(d.balance)) : null
-    }))
-  }
-  return data.map(d => ({
-    x: d.target_date,
-    y: d[currentMetric] != null ? Number(d[currentMetric]) : null
-  }))
+  const [bodyData, balanceData] = await Promise.all([
+    getBodyTrend(startDate, endDate),
+    getCalorieBalanceTrend(startDate, endDate),
+  ])
+  return { bodyData, balanceData }
 }
 
 // =============================================
-// Chart.js 共通設定
+// Chart.js 設定（混合: 折れ線 + 棒グラフ）
 // =============================================
-function buildChartConfig(labels, values) {
+function buildChartConfig(labels, metricValues, balanceValues) {
   const color = COLORS[currentMetric]
-  const isBalance = currentMetric === 'balance'
 
-  // 収支グラフ: 正負で色分け
-  const pointColors = isBalance
-    ? values.map(v => v == null ? 'transparent' : v > 0 ? '#f87171' : '#4ade80')
-    : color.line
+  // 収支バーの色: 正 = 赤(カロリー余剰)、負 = 緑(カロリー不足)
+  const barColors = balanceValues.map(v =>
+    v == null ? 'transparent' : v > 0 ? 'rgba(248,113,113,0.65)' : 'rgba(74,222,128,0.65)'
+  )
+  const barBorderColors = balanceValues.map(v =>
+    v == null ? 'transparent' : v > 0 ? '#f87171' : '#4ade80'
+  )
 
   return {
-    type: 'line',
     data: {
       labels,
-      datasets: [{
-        label: METRIC_LABEL[currentMetric],
-        data: values,
-        borderColor: isBalance ? '#a78bfa' : color.line,
-        backgroundColor: color.fill,
-        pointBackgroundColor: pointColors,
-        pointBorderColor: 'transparent',
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        borderWidth: 2,
-        fill: true,
-        tension: 0.3,
-        spanGaps: true,   // データ欠損日はスキップして線を継続
-      }]
+      datasets: [
+        // 収支バー（奥に描画されるよう order を大きく）
+        {
+          type: 'bar',
+          label: 'カロリー収支 (kcal)',
+          data: balanceValues,
+          backgroundColor: barColors,
+          borderColor: barBorderColors,
+          borderWidth: 1,
+          yAxisID: 'y2',
+          order: 2,
+        },
+        // 体組成指標ライン（手前）
+        {
+          type: 'line',
+          label: METRIC_LABEL[currentMetric],
+          data: metricValues,
+          borderColor: color.line,
+          backgroundColor: color.fill,
+          pointBackgroundColor: color.line,
+          pointBorderColor: 'transparent',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          spanGaps: true,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ]
     },
     options: {
       responsive: true,
@@ -119,17 +122,17 @@ function buildChartConfig(labels, values) {
               return `${d.getMonth()+1}月${d.getDate()}日(${days[d.getDay()]})`
             },
             label: ctx => {
-              if (ctx.parsed.y == null) return '— データなし'
+              if (ctx.parsed.y == null) return null
               const v = ctx.parsed.y
-              if (currentMetric === 'balance') {
-                return ` ${v > 0 ? '+' : ''}${v} kcal`
+              if (ctx.dataset.yAxisID === 'y2') {
+                return ` 収支: ${v > 0 ? '+' : ''}${v} kcal`
               }
               if (currentMetric === 'body_fat_pct') return ` ${v} %`
               return ` ${v} kg`
             },
             labelColor: ctx => ({
               borderColor: 'transparent',
-              backgroundColor: isBalance
+              backgroundColor: ctx.dataset.yAxisID === 'y2'
                 ? (ctx.parsed.y > 0 ? '#f87171' : '#4ade80')
                 : color.line
             })
@@ -147,26 +150,35 @@ function buildChartConfig(labels, values) {
           grid: { color: '#1e2130' },
           border: { color: '#2a2d3a' }
         },
-        y: {
+        // 左軸: 体組成指標
+        y1: {
+          position: 'left',
           ticks: {
-            color: '#64748b',
+            color: color.line,
             font: { family: "'DM Mono', monospace", size: 10 },
             callback: v => {
-              if (currentMetric === 'balance') return (v > 0 ? '+' : '') + v
               if (currentMetric === 'body_fat_pct') return v + '%'
               return v + 'kg'
             }
           },
           grid: { color: '#1e2130' },
           border: { color: '#2a2d3a' },
-          // 収支グラフは0ラインを強調
-          ...(isBalance ? {
-            afterDataLimits(scale) {
-              const abs = Math.max(Math.abs(scale.min), Math.abs(scale.max))
-              scale.min = -abs
-              scale.max = abs
-            }
-          } : {})
+        },
+        // 右軸: カロリー収支（0を中心に対称）
+        y2: {
+          position: 'right',
+          ticks: {
+            color: '#a78bfa',
+            font: { family: "'DM Mono', monospace", size: 10 },
+            callback: v => (v > 0 ? '+' : '') + v
+          },
+          grid: { drawOnChartArea: false },
+          border: { color: '#2a2d3a' },
+          afterDataLimits(scale) {
+            const abs = Math.max(Math.abs(scale.min), Math.abs(scale.max), 1)
+            scale.min = -abs
+            scale.max = abs
+          }
         }
       }
     }
@@ -180,7 +192,6 @@ async function renderChart(endDate) {
   const canvas = document.getElementById('trend-chart')
   if (!canvas) return
 
-  // ローディング表示
   const wrapper = canvas.parentElement
   let loader = wrapper.querySelector('.chart-loader')
   if (!loader) {
@@ -193,40 +204,40 @@ async function renderChart(endDate) {
   loader.style.display = 'flex'
 
   try {
-    const data = await fetchData(endDate, currentPeriod)
+    const { bodyData, balanceData } = await fetchData(endDate, currentPeriod)
 
-    // 期間内の全日付ラベルを生成（データのない日はnull）
-    const dateMap = new Map(data.map(d => [d.target_date, d]))
-    const labels = []
-    const values = []
+    const bodyMap    = new Map(bodyData.map(d => [d.target_date, d]))
+    const balanceMap = new Map(balanceData.map(d => [d.target_date, d]))
+    const labels        = []
+    const metricValues  = []
+    const balanceValues = []
     const start = subtractDays(endDate, currentPeriod - 1)
 
     let cur = start
     while (cur <= endDate) {
       labels.push(formatDateShort(cur))
-      const row = dateMap.get(cur)
-      if (row) {
-        if (currentMetric === 'balance') {
-          values.push(row.balance != null ? Math.round(Number(row.balance)) : null)
-        } else {
-          values.push(row[currentMetric] != null ? Number(row[currentMetric]) : null)
-        }
-      } else {
-        values.push(null)
-      }
-      // 翌日へ
+
+      const bodyRow = bodyMap.get(cur)
+      metricValues.push(
+        bodyRow && bodyRow[currentMetric] != null ? Number(bodyRow[currentMetric]) : null
+      )
+
+      const balRow = balanceMap.get(cur)
+      balanceValues.push(
+        balRow && balRow.balance != null ? Math.round(Number(balRow.balance)) : null
+      )
+
       const d = new Date(cur + 'T12:00:00+09:00')
       d.setDate(d.getDate() + 1)
       cur = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
     }
 
-    // 既存チャートを破棄
     if (chartInstance) {
       chartInstance.destroy()
       chartInstance = null
     }
 
-    const cfg = buildChartConfig(labels, values)
+    const cfg = buildChartConfig(labels, metricValues, balanceValues)
     chartInstance = new Chart(canvas, cfg)
 
   } catch (err) {
@@ -244,7 +255,6 @@ async function renderChart(endDate) {
 // タブ切替
 // =============================================
 function initTabs() {
-  // メトリクスタブ
   document.getElementById('chart-tabs')?.addEventListener('click', e => {
     const btn = e.target.closest('.chart-tab')
     if (!btn) return
@@ -254,7 +264,6 @@ function initTabs() {
     if (currentEndDate) renderChart(currentEndDate)
   })
 
-  // 期間タブ
   document.getElementById('period-tabs')?.addEventListener('click', e => {
     const btn = e.target.closest('.chart-period-tab')
     if (!btn) return
@@ -274,7 +283,5 @@ window.refreshCharts = async (dateStr) => {
   await renderChart(dateStr)
 }
 
-// DOM 準備後にタブを初期化
 document.addEventListener('DOMContentLoaded', initTabs)
-// DOMContentLoaded が既に発火済みの場合も考慮
 if (document.readyState !== 'loading') initTabs()
