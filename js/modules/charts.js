@@ -40,7 +40,7 @@ function formatDateShort(dateStr) {
 }
 
 // =============================================
-// データ取得（体組成 + 収支 を並行取得）
+// データ取得（体組成 + 収支を並行取得）
 // =============================================
 async function fetchData(endDate, periodDays) {
   const startDate = subtractDays(endDate, periodDays - 1)
@@ -52,29 +52,32 @@ async function fetchData(endDate, periodDays) {
 }
 
 // =============================================
-// Chart.js 設定（折れ線 + 収支棒グラフ）
+// Chart.js 設定
 // =============================================
 function buildChartConfig(labels, metricValues, balanceValues) {
   const color = COLORS[currentMetric]
 
-  const barColors = balanceValues.map(v =>
-    v == null ? 'transparent' : v > 0 ? 'rgba(248,113,113,0.6)' : 'rgba(74,222,128,0.6)'
-  )
+  const barBgColors = balanceValues.map(v => {
+    if (v == null) return 'transparent'
+    return v > 0 ? 'rgba(248,113,113,0.6)' : 'rgba(74,222,128,0.6)'
+  })
 
   return {
     type: 'line',
     data: {
       labels,
       datasets: [
+        // 収支棒グラフ（背景）
         {
           type: 'bar',
           label: '収支 (kcal)',
           data: balanceValues,
-          backgroundColor: barColors,
+          backgroundColor: barBgColors,
           borderWidth: 0,
           yAxisID: 'yRight',
           order: 2,
         },
+        // 体組成折れ線（前景）
         {
           type: 'line',
           label: METRIC_LABEL[currentMetric],
@@ -147,7 +150,7 @@ function buildChartConfig(labels, metricValues, balanceValues) {
         y: {
           position: 'left',
           ticks: {
-            color: color.line,
+            color: '#64748b',
             font: { family: "'DM Mono', monospace", size: 10 },
             callback: v => currentMetric === 'body_fat_pct' ? v + '%' : v + 'kg'
           },
@@ -177,27 +180,15 @@ async function renderChart(endDate) {
   if (!canvas) return
 
   const wrapper = canvas.parentElement
-
-  // ローディング
   let loader = wrapper.querySelector('.chart-loader')
   if (!loader) {
     loader = document.createElement('div')
-    loader.className = 'chart-loader'
-    loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px;pointer-events:none'
+    loader.className = 'chart-loader loading'
+    loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center'
     wrapper.appendChild(loader)
   }
   loader.textContent = '読み込み中...'
   loader.style.display = 'flex'
-
-  // エラー表示要素（canvasを破棄しない）
-  let errEl = wrapper.querySelector('.chart-err')
-  if (!errEl) {
-    errEl = document.createElement('div')
-    errEl.className = 'chart-err'
-    errEl.style.cssText = 'position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#f87171;font-size:13px;padding:12px;text-align:center'
-    wrapper.appendChild(errEl)
-  }
-  errEl.style.display = 'none'
 
   try {
     const { bodyData, balanceData } = await fetchData(endDate, currentPeriod)
@@ -236,9 +227,11 @@ async function renderChart(endDate) {
     chartInstance = new Chart(canvas, buildChartConfig(labels, metricValues, balanceValues))
 
   } catch (err) {
-    console.error('[charts] renderChart error:', err)
-    errEl.textContent = `グラフ取得エラー: ${err.message}`
-    errEl.style.display = 'flex'
+    console.error('Chart error:', err)
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null }
+    canvas.parentElement.innerHTML =
+      `<div class="error-msg" style="margin:16px;color:#f87171">グラフ取得エラー: ${err.message}</div>`
+    return
   } finally {
     loader.style.display = 'none'
   }
@@ -277,4 +270,4 @@ window.refreshCharts = async (dateStr) => {
 
 document.addEventListener('DOMContentLoaded', initTabs)
 if (document.readyState !== 'loading') initTabs()
-                                                                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
