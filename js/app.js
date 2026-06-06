@@ -1,6 +1,7 @@
 import { requireAuth, signOut } from './auth.js'
 import { getDailySummary, getDailyTimeline } from './api.js'
 import { DAY_BOUNDARY_HOUR } from './config.js'
+import { supabase } from './supabase.js'
 
 // =============================================
 // 日付ユーティリティ
@@ -154,6 +155,12 @@ async function loadDate(dateStr) {
 async function init() {
   const session = await requireAuth()
   if (!session) return
+
+  // ログイン後: user_id / daily_log_id バックフィルをサイレント実行
+  supabase.rpc('run_user_backfill').then(({ data, error }) => {
+    if (error) console.warn('[backfill] error:', error.message)
+    else if (Object.values(data).some(v => v > 0)) console.log('[backfill] updated:', data)
+  })
 
   // サインアウトボタン
   document.getElementById('signout-btn').addEventListener('click', signOut)

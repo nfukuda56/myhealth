@@ -19,8 +19,46 @@
         <button id="today-btn" class="today-btn">今日</button>
       </nav>
     </div>
-    <button id="signout-btn" class="signout-btn">サインアウト</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button id="import-open-btn" class="signout-btn" title="Notion CSV 取込" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent)">↑ CSV取込</button>
+      <button id="signout-btn" class="signout-btn">サインアウト</button>
+    </div>
   </header>
+
+  <!-- CSV取込モーダル -->
+  <div class="modal-overlay" id="import-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center">
+    <div id="import-modal" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;width:min(480px,94vw);max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
+        <span style="font-family:var(--mono);font-size:0.8rem;color:var(--accent);letter-spacing:0.08em">NOTION CSV 取込（meals）</span>
+        <button id="import-close-btn" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;line-height:1">×</button>
+      </div>
+
+      <div style="border:1px dashed var(--border);border-radius:6px;padding:1rem;text-align:center;position:relative;margin-bottom:0.75rem">
+        <input type="file" id="import-csv-file" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%">
+        <p style="font-size:0.78rem;color:var(--text-muted)">Notionエクスポート CSV をドロップ or クリックして選択</p>
+        <div id="import-file-name" style="font-family:var(--mono);font-size:0.72rem;color:var(--accent);margin-top:0.4rem"></div>
+      </div>
+
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.4rem">日付フィルター（空欄 = 全件）</div>
+      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem">
+        <label style="font-size:0.75rem;color:var(--text-muted)">開始日</label>
+        <input type="date" id="import-from" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:0.78rem;padding:0.3rem 0.5rem">
+        <label style="font-size:0.75rem;color:var(--text-muted)">終了日</label>
+        <input type="date" id="import-to"   style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:0.78rem;padding:0.3rem 0.5rem">
+        <button id="import-clear-dates" style="padding:0.3rem 0.7rem;font-family:var(--mono);font-size:0.7rem;background:var(--warn-dim);border:1px solid var(--warn);color:var(--warn);border-radius:4px;cursor:pointer">クリア</button>
+      </div>
+
+      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:0.6rem">
+        <button id="import-exec-btn" disabled style="padding:0.5rem 1rem;font-family:var(--mono);font-size:0.78rem;background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);border-radius:6px;cursor:pointer">取込実行</button>
+        <span id="import-preview" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--mono)"></span>
+      </div>
+
+      <div id="import-progress-wrap" style="background:var(--border);border-radius:4px;height:3px;margin:0.5rem 0;overflow:hidden;display:none">
+        <div id="import-progress-bar" style="height:100%;width:0%;background:var(--accent);transition:width 0.2s;border-radius:4px"></div>
+      </div>
+      <div id="import-log" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0.7rem 1rem;font-family:var(--mono);font-size:0.7rem;line-height:1.9;max-height:180px;overflow-y:auto;display:none;margin-top:0.5rem"></div>
+    </div>
+  </div>
 
   <!-- メイン: 2カラム -->
   <main class="app-main">
@@ -88,14 +126,26 @@
     </div>
   </main>
 
+  <style>
+    #import-modal-overlay.show { display: flex !important; }
+    #import-exec-btn:not(:disabled):hover { background: var(--accent); color: #0f1117; }
+    .log-ok   { color: var(--accent); }
+    .log-err  { color: var(--danger); }
+    .log-info { color: var(--text-muted); }
+    .log-warn { color: var(--warn); }
+  </style>
+
   <!-- Chart.js (UMD: window.Chart として利用) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 
   <!-- グラフモジュール（window.refreshCharts を先に定義） -->
   <script type="module" src="js/modules/charts.js?v=6"></script>
 
+  <!-- CSV取込モジュール -->
+  <script type="module" src="js/modules/import.js?v=1"></script>
+
   <!-- アプリ本体 -->
   <script type="module" src="js/app.js"></script>
 
 </body>
-</ht
+</html>
