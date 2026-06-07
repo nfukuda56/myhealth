@@ -24,7 +24,6 @@ export function todayTargetDate() {
   const now = new Date()
   const jstHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' })).getHours()
   if (jstHour < DAY_BOUNDARY_HOUR) {
-    // 深夜0〜3時は前日扱い
     now.setDate(now.getDate() - 1)
   }
   return toDateStr(now)
@@ -61,7 +60,6 @@ async function renderSummary(dateStr) {
     const balanceColor = balance > 0 ? 'rgba(248,113,113,0.75)' : 'rgba(74,222,128,0.75)'
     const MAX_KCAL = 2000
     const pct = Math.min(Math.abs(balance) / MAX_KCAL * 50, 50)
-    // 正: 中央より右へ, 負: 中央より左へ
     const barLeft  = balance >= 0 ? 50 : 50 - pct
     const barWidth = pct
 
@@ -85,7 +83,6 @@ async function renderSummary(dateStr) {
         </div>
       </div>
 
-      <!-- 収支横棒グラフ -->
       <div style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
           <span style="font-size:11px;color:var(--text-muted);font-family:var(--mono);letter-spacing:0.06em">BALANCE</span>
@@ -94,16 +91,11 @@ async function renderSummary(dateStr) {
           </span>
         </div>
         <div style="position:relative;height:18px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;overflow:hidden">
-          <!-- 中央ゼロライン -->
           <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border);z-index:1"></div>
-          <!-- バー -->
-          <div style="position:absolute;top:2px;bottom:2px;border-radius:3px;
-                      left:${barLeft}%;width:${barWidth}%;
-                      background:${balanceColor};
-                      transition:all 0.4s ease"></div>
+          <div style="position:absolute;top:2px;bottom:2px;border-radius:3px;left:${barLeft}%;width:${barWidth}%;background:${balanceColor};transition:all 0.4s ease"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:3px;font-family:var(--mono);font-size:10px;color:var(--text-muted)">
-          <span>−${MAX_KCAL}</span><span>0</span><span>+${MAX_KCAL}</span>
+          <span>-${MAX_KCAL}</span><span>0</span><span>+${MAX_KCAL}</span>
         </div>
       </div>
 
@@ -158,4 +150,46 @@ async function renderTimeline(dateStr) {
 // =============================================
 function updateDateDisplay() {
   document.getElementById('date-display').textContent = formatDateJa(currentDate)
-  const isT
+  const isToday = currentDate === todayTargetDate()
+  document.getElementById('today-btn').style.opacity = isToday ? '0.4' : '1'
+}
+
+async function loadDate(dateStr) {
+  currentDate = dateStr
+  updateDateDisplay()
+  await Promise.all([
+    renderSummary(dateStr),
+    renderTimeline(dateStr),
+    window.refreshCharts?.(dateStr)
+  ])
+}
+
+// =============================================
+// 初期化
+// =============================================
+async function init() {
+  const session = await requireAuth()
+  if (!session) return
+
+  // ログイン後: user_id / daily_log_id バックフィルをサイレント実行
+  supabase.rpc('run_user_backfill').then(({ data, error }) => {
+    if (error) console.warn('[backfill] error:', error.message)
+    else if (Object.values(data).some(v => v > 0)) console.log('[backfill] updated:', data)
+  })
+
+  // サインアウトボタン
+  document.getElementById('signout-btn').addEventListener('click', signOut)
+
+  // 日付ナビ
+  document.getElementById('prev-btn').addEventListener('click',
+    () => loadDate(addDays(currentDate, -1)))
+  document.getElementById('next-btn').addEventListener('click',
+    () => loadDate(addDays(currentDate, 1)))
+  document.getElementById('today-btn').addEventListener('click',
+    () => loadDate(todayTargetDate()))
+
+  // 初回ロード
+  await loadDate(currentDate)
+}
+
+init()
