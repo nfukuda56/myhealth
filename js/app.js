@@ -77,9 +77,10 @@ function buildWaterfallSvg(intakeKcal, basalKcal, burnedKcal) {
   const basalX   = BAR_RIGHT - basalW           // 基礎代謝バー左端
   const burnedX  = basalX    - burnedW          // 運動消費バー左端（基礎左端からさらに左）
   // BALANCEバー座標
-  // 余剰(+): 消費合計左端(burnedX)〜摂取左端(intakeX) の間
-  // 黒字(-): 摂取左端(intakeX)〜消費合計左端(burnedX) の間
-  const balBarX  = balance >= 0 ? burnedX : intakeX
+  // 余剰(+): burnedX(消費合計左端) 〜 intakeX(摂取左端)  → x=burnedX, w=intakeX-burnedX
+  // 黒字(-): burnedX(消費合計左端) 〜 intakeX(摂取左端)  → 同じ。burnedXがintakeXより左
+  // どちらも x=burnedX, w=|intakeX-burnedX| で統一
+  const balBarX  = Math.min(burnedX, intakeX)
 
   const totalH = 4 * ROW_H + 3 * GAP
 
@@ -130,19 +131,22 @@ function buildWaterfallSvg(intakeKcal, basalKcal, burnedKcal) {
     + val(2, -burned, burned > 0 ? C.burned : C.muted)
 
   // ---- 行3: BALANCE ----
-  const balColor = balance >= 0 ? C.surplus : C.deficit
+  const balColor  = balance >= 0 ? C.surplus : C.deficit
+  const balActualW = Math.abs(intakeX - burnedX)  // 摂取左端〜消費合計左端の実距離
   const r3 = lbl(3, 'BALANCE', balColor)
-    + (balanceW > 0.5
-        ? bar(balBarX, 3, balanceW, balColor, 0.9)
+    + (balActualW > 0.5
+        ? bar(balBarX, 3, balActualW, balColor, 0.9)
         : vline(burnedX, barY(3), barY(3) + BAR_H, balColor, 2))
     + val(3, balance, balColor)
 
   // ---- ガイドライン ----
-  const guideRight   = vline(BAR_RIGHT, 0, totalH, '#334155', 0.8, '3,2')
+  // 摂取左端（0基点）縦破線：全行に渡って表示
+  const guideZero    = vline(intakeX, 0, totalH, '#334155', 0.8, '3,2')
+  // 収支点縦線（BALANCE行のみ強調）
   const guideBalance = vline(burnedX, barY(3), barY(3) + BAR_H, balColor, 2.5)
 
   return `<svg viewBox="0 0 ${VW} ${totalH}" xmlns="http://www.w3.org/2000/svg" width="100%" style="display:block;overflow:visible;margin-top:4px">
-  ${guideRight}
+  ${guideZero}
   ${r0}
   ${r1}
   ${r2}
