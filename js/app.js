@@ -40,125 +40,128 @@ export function toJstTime(utcStr) {
 // =============================================
 // ウォーターフォール BALANCE グラフ（SVG 横向き）
 //
-// レイアウト:
-//   摂取     [━━━━━━━━━━━━━━━━] 1850 kcal
-//            ←基礎代謝━━━━━━━━ -1549
-//            ←運動消費━━━━      - 250
-//   BALANCE                ■   -  51 kcal  (負=緑/正=赤)
+// 設計:
+//   全バーの「左端（X=BAR_LEFT）」を共通0点として固定。
+//   摂取バーが0→右へ伸びる。
+//   基礎代謝は摂取バーの「左端(0)」から右へ積む（摂取の中に収まる）。
+//   運動消費は基礎代謝の右端から続けて右へ積む。
+//   BALANCE点は基礎代謝+運動消費の右端。
+//   収支が正（余剰）なら右端がさらに摂取の内側にある→残量バー。
+//   収支が負（黒字）なら基礎+運動が摂取を超える→はみ出しバー。
 //
-// 摂取バーの右端を「0点」として、
-// 基礎代謝・運動消費を左方向へ積み上げ、
-// 残った端点が収支（BALANCE）を示す。
+//  例: 摂取1850 基礎1549 運動250 収支+51
+//  0                                         →
+//  [━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━]  摂取 1850
+//  [━━━━━━━━━━━━━━━━━━━━━━━━][━━━━━━]|  基礎1549 + 運動250 | BALANCE点
+//                                      ↑収支点（摂取右端の手前 = +51kcal余り）
 // =============================================
 function buildWaterfallSvg(intakeKcal, basalKcal, burnedKcal) {
   const intake  = Math.round(intakeKcal ?? 0)
   const basal   = Math.round(basalKcal  ?? 0)
   const burned  = Math.round(burnedKcal ?? 0)
-  const balance = intake - basal - burned   // 負=黒字、正=赤字
+  const balance = intake - basal - burned  // 正=余剰(赤字), 負=黒字
 
-  // --- レイアウト定数 (viewBox 単位) ---
-  const VW       = 260   // viewBox 幅
-  const ROW_H    = 18    // 1行の高さ
-  const BAR_H    = 12    // バー高さ
-  const GAP      = 5     // 行間
-  const LABEL_W  = 56    // 左ラベル幅
-  const VAL_W    = 46    // 右数値幅
-  const BAR_AREA = VW - LABEL_W - VAL_W  // バー描画幅
+  // --- レイアウト定数 ---
+  const VW       = 260
+  const ROW_H    = 18
+  const BAR_H    = 12
+  const GAP      = 5
+  const LABEL_W  = 56   // 左ラベル幅
+  const VAL_W    = 46   // 右数値幅
+  const BAR_LEFT = LABEL_W          // バー描画開始X（共通0点）
+  const BAR_MAX  = VW - LABEL_W - VAL_W  // バー最大幅 = 158
 
-  // スケール: 摂取が BAR_AREA の 75% を占めるよう基準設定
-  // ただし basal+burned が intake を超える場合は全体に合わせる
+  // スケール: 摂取か（基礎+運動）の大きい方をBAR_MAX*0.9に収める
   const scaleBase = Math.max(intake, basal + burned, 1)
-  const scale     = (BAR_AREA * 0.85) / scaleBase  // px/kcal
+  const scale     = (BAR_MAX * 0.90) / scaleBase
 
-  const intakeW  = Math.max(intake  * scale, 1)
-  const basalW   = Math.max(basal   * scale, 1)
-  const burnedW  = burned > 0 ? Math.max(burned * scale, 1) : 0
-  const balanceW = Math.abs(balance) * scale
+  // 各バー幅（0点から右へ）
+  const intakeW  = intake              * scale
+  const basalW   = basal               * scale
+  const burnedW  = burned              * scale
+  const totalConsumedW = basalW + burnedW  // 基礎+運動の合計幅
+  const balanceW = Math.abs(balance)   * scale
 
-  // 摂取バー右端 = BAR基点（ここから左に消費を積む）
-  const barOrigin = LABEL_W + intakeW
+  // 各バーのX座標（すべて BAR_LEFT=0点から右へ）
+  const intakeEndX  = BAR_LEFT + intakeW        // 摂取の右端
+  const basalEndX   = BAR_LEFT + basalW         // 基礎代謝の右端
+  const burnedEndX  = BAR_LEFT + totalConsumedW // 運動消費の右端 = BALANCE点
+  const balanceX    = burnedEndX                // BALANCE基点
 
-  // 色
+  const totalH = 4 * ROW_H + 3 * GAP
+
   const C = {
-    intake:  '#4ade80',   // 緑
-    basal:   '#60a5fa',   // 青
-    burned:  '#a78bfa',   // 紫
-    surplus: '#f87171',   // 赤（収支プラス＝食い過ぎ）
-    deficit: '#4ade80',   // 緑（収支マイナス＝黒字）
+    intake:  '#4ade80',
+    basal:   '#60a5fa',
+    burned:  '#a78bfa',
+    surplus: '#f87171',  // 正=余剰=赤
+    deficit: '#34d399',  // 負=黒字=緑（摂取<消費）
     label:   '#94a3b8',
     value:   '#e2e8f0',
     muted:   '#64748b',
   }
 
-  const rows = [
-    { key: 'intake' },
-    { key: 'basal'  },
-    { key: 'burned' },
-    { key: 'balance'},
-  ]
-  const totalH = rows.length * ROW_H + (rows.length - 1) * GAP
+  const ty   = (i) => i * (ROW_H + GAP)
+  const barY = (i) => ty(i) + (ROW_H - BAR_H) / 2
+  const midY = (i) => ty(i) + ROW_H / 2
 
-  // ヘルパー
-  const ty    = (i) => i * (ROW_H + GAP)                         // 行のY座標
-  const barY  = (i) => ty(i) + (ROW_H - BAR_H) / 2              // バーのY座標
-  const midY  = (i) => ty(i) + ROW_H / 2                         // テキスト中央Y
-
-  // 各行SVG
-  function rowLabel(i, text, color = C.label) {
-    return `<text x="${LABEL_W - 4}" y="${midY(i)}" text-anchor="end" fill="${color}" font-size="9" font-family="'Noto Sans JP',sans-serif" dominant-baseline="middle">${text}</text>`
+  function label(i, text, color = C.label) {
+    return `<text x="${BAR_LEFT - 4}" y="${midY(i)}" text-anchor="end" fill="${color}" font-size="9" font-family="'Noto Sans JP',sans-serif" dominant-baseline="middle">${text}</text>`
   }
-  function rowValue(i, val, color = C.value) {
-    const sign = val > 0 ? '+' : val < 0 ? '' : ''
+  function value(i, val, color = C.value) {
+    const sign = val > 0 ? '+' : ''
     return `<text x="${VW - 2}" y="${midY(i)}" text-anchor="end" fill="${color}" font-size="9" font-family="'DM Mono',monospace" dominant-baseline="middle">${sign}${val.toLocaleString()}</text>`
   }
-  function rect(x, y, w, h, fill, opacity = 1, rx = 2) {
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(w,0).toFixed(1)}" height="${h}" rx="${rx}" fill="${fill}" fill-opacity="${opacity}"/>`
+  function bar(x, i, w, fill, opacity = 0.85, rx = 2) {
+    return `<rect x="${x.toFixed(1)}" y="${barY(i).toFixed(1)}" width="${Math.max(w, 0).toFixed(1)}" height="${BAR_H}" rx="${rx}" fill="${fill}" fill-opacity="${opacity}"/>`
+  }
+  function vline(x, y1, y2, color, sw = 1.5, dash = '') {
+    return `<line x1="${x.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`
   }
 
-  // ---- 行0: 摂取 ----
-  const r0 = rowLabel(0, '摂取', C.intake)
-    + rect(LABEL_W, barY(0), intakeW, BAR_H, C.intake, 0.8)
-    + rowValue(0, intake, C.intake)
+  // ---- 行0: 摂取（0→右へ） ----
+  const r0 = label(0, '摂取', C.intake)
+    + bar(BAR_LEFT, 0, intakeW, C.intake)
+    + value(0, intake, C.intake)
 
-  // ---- 行1: 基礎代謝（摂取右端から左へ） ----
-  const basalX = barOrigin - basalW
-  const r1 = rowLabel(1, '基礎代謝', C.basal)
-    + rect(basalX, barY(1), basalW, BAR_H, C.basal, 0.8)
-    + rowValue(1, -basal, C.basal)
+  // ---- 行1: 基礎代謝（0→basalEndX） ----
+  const r1 = label(1, '基礎代謝', C.basal)
+    + bar(BAR_LEFT, 1, basalW, C.basal)
+    + value(1, -basal, C.basal)
 
-  // ---- 行2: 運動消費（基礎代謝の左端からさらに左へ） ----
-  const burnedX = basalX - burnedW
-  const r2 = rowLabel(2, '運動消費', burned > 0 ? C.burned : C.muted)
+  // ---- 行2: 運動消費（basalEndX→burnedEndX、基礎の続き） ----
+  const r2 = label(2, '運動消費', burned > 0 ? C.burned : C.muted)
     + (burned > 0
-      ? rect(burnedX, barY(2), burnedW, BAR_H, C.burned, 0.8)
-      : `<text x="${LABEL_W + 2}" y="${midY(2)}" fill="${C.muted}" font-size="8" dominant-baseline="middle">—</text>`)
-    + rowValue(2, -burned, burned > 0 ? C.burned : C.muted)
+        ? bar(basalEndX, 2, burnedW, C.burned)
+        : `<text x="${BAR_LEFT + 2}" y="${midY(2)}" fill="${C.muted}" font-size="8" dominant-baseline="middle">—</text>`)
+    + value(2, -burned, burned > 0 ? C.burned : C.muted)
 
-  // ---- 行3: BALANCE（収支点を示す縦線＋値） ----
-  // 収支点 X = barOrigin - basalW - burnedW = burnedX
-  const balanceX = burnedX
-  const balColor = balance > 0 ? C.surplus : C.deficit
-  // 収支バー：balanceXから右（余剰）または左（黒字）方向へ
-  const balBarX = balance >= 0 ? balanceX : balanceX - balanceW
-  const r3 = rowLabel(3, 'BALANCE', balColor)
-    + (balanceW > 0.5
-        ? rect(balBarX, barY(3), balanceW, BAR_H, balColor, 0.9)
-        : `<line x1="${balanceX.toFixed(1)}" y1="${barY(3)}" x2="${balanceX.toFixed(1)}" y2="${(barY(3)+BAR_H).toFixed(1)}" stroke="${balColor}" stroke-width="1.5"/>`)
-    + rowValue(3, balance, balColor)
+  // ---- 行3: BALANCE ----
+  // balance>0: 摂取の中に余り（balanceX〜intakeEndX の間）
+  // balance<0: 消費が摂取を超えた（intakeEndX〜balanceX の間）
+  const balColor = balance >= 0 ? C.surplus : C.deficit
+  const balBarX  = balance >= 0 ? balanceX : intakeEndX
+  const balBarW  = balanceW
+
+  const r3 = label(3, 'BALANCE', balColor)
+    + (balBarW > 0.5
+        ? bar(balBarX, 3, balBarW, balColor, 0.9)
+        : vline(balanceX, barY(3), barY(3) + BAR_H, balColor, 2))
+    + value(3, balance, balColor)
 
   // ---- ガイドライン ----
-  // 摂取右端（0点）の縦破線
-  const guideLine = `<line x1="${barOrigin.toFixed(1)}" y1="0" x2="${barOrigin.toFixed(1)}" y2="${totalH}" stroke="#2a2d3a" stroke-width="0.8" stroke-dasharray="3,2"/>`
-  // 収支点の縦線
-  const balLine   = `<line x1="${balanceX.toFixed(1)}" y1="${barY(3)}" x2="${balanceX.toFixed(1)}" y2="${(barY(3)+BAR_H).toFixed(1)}" stroke="${balColor}" stroke-width="2"/>`
+  // 摂取右端（基点0の対応点）縦破線
+  const guideIntake = vline(intakeEndX, 0, totalH, '#334155', 0.8, '3,2')
+  // BALANCE点縦線（強調）
+  const guideBalance = vline(balanceX, barY(3), barY(3) + BAR_H, balColor, 2.5)
 
   return `<svg viewBox="0 0 ${VW} ${totalH}" xmlns="http://www.w3.org/2000/svg" width="100%" style="display:block;overflow:visible;margin-top:4px">
-  ${guideLine}
+  ${guideIntake}
   ${r0}
   ${r1}
   ${r2}
   ${r3}
-  ${balLine}
+  ${guideBalance}
 </svg>`
 }
 
@@ -171,7 +174,6 @@ async function renderSummary(dateStr) {
   try {
     const s = await getDailySummary(dateStr)
 
-    // 今日は basal_elapsed_kcal（時間比例済み）、過去日は basal_metabolism（全量）
     const isToday      = dateStr === todayTargetDate()
     const basalDisplay = isToday
       ? (s.basal_elapsed_kcal ?? s.basal_metabolism ?? 0)
@@ -281,14 +283,8 @@ async function loadDate(dateStr) {
   ])
 }
 
-// =============================================
-// 状態
-// =============================================
 let currentDate = todayTargetDate()
 
-// =============================================
-// 初期化
-// =============================================
 async function init() {
   const session = await requireAuth()
   if (!session) return
@@ -299,13 +295,9 @@ async function init() {
   })
 
   document.getElementById('signout-btn').addEventListener('click', signOut)
-
-  document.getElementById('prev-btn').addEventListener('click',
-    () => loadDate(addDays(currentDate, -1)))
-  document.getElementById('next-btn').addEventListener('click',
-    () => loadDate(addDays(currentDate, 1)))
-  document.getElementById('today-btn').addEventListener('click',
-    () => loadDate(todayTargetDate()))
+  document.getElementById('prev-btn').addEventListener('click', () => loadDate(addDays(currentDate, -1)))
+  document.getElementById('next-btn').addEventListener('click', () => loadDate(addDays(currentDate, 1)))
+  document.getElementById('today-btn').addEventListener('click', () => loadDate(todayTargetDate()))
 
   await loadDate(currentDate)
 }
