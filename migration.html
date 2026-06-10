@@ -346,13 +346,17 @@ header p {
   <div class="section">
     <div class="section-title">⚠ テーブル削除</div>
     <p class="delete-desc">
-      各テーブルの全データを削除します。daily_logsを削除するとCASCADEで関連データもすべて削除されます。
+      各テーブルの全データを削除します。<br>
+      ※ daily_logs 全削除は廃止しました（CASCADEでmealsが消えるため）。<br>
+      ※ Apple Health 取込は import_apple_health.py（部分置換RPC方式）が自動処理するため、事前削除は不要です。
     </p>
     <div class="delete-row">
       <button class="btn btn-danger btn-sm" onclick="confirmDelete('meals')">meals 削除</button>
       <button class="btn btn-danger btn-sm" onclick="confirmDelete('body_metrics')">body_metrics 削除</button>
       <button class="btn btn-danger btn-sm" onclick="confirmDelete('exercises')">exercises 削除</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmDelete('daily_logs')">daily_logs 全削除 (CASCADE)</button>
+      <button class="btn btn-danger btn-sm" disabled
+              style="opacity:0.35;cursor:not-allowed"
+              title="廃止: CASCADEでmealsが削除されるため使用不可">daily_logs 全削除 (廃止)</button>
     </div>
   </div>
 
@@ -617,9 +621,39 @@ function clearCsvDates() {
 document.getElementById('csv-from').addEventListener('change', updateCsvPreview);
 document.getElementById('csv-to').addEventListener('change',   updateCsvPreview);
 
+// 既存meals照会用の重複キー生成
+// measured_at はタイムゾーン表記差を吸収するため epoch ms で正規化
+function mealDupKey(measured_at, meal_type, menu_name, calories_kcal) {
+  const t = Date.parse(measured_at);
+  const menu = (menu_name || '').trim();
+  const kcal = (calories_kcal == null || calories_kcal === '') ? '' : String(Number(calories_kcal));
+  return `${t}|${meal_type}|${menu}|${kcal}`;
+}
+
+// DBから既存mealsの重複キーセットを取得
+async function fetchExistingMealKeys() {
+  const keys = new Set();
+  const PAGE = 1000;
+  let offset = 0;
+  while (true) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/meals?select=measured_at,meal_type,menu_name,calories_kcal` +
+      `&limit=${PAGE}&offset=${offset}`,
+      { headers: H }
+    );
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    rows.forEach(r => keys.add(
+      mealDupKey(r.measured_at, r.meal_type, r.menu_name, r.calories_kcal)));
+    if (rows.length < PAGE) break;
+    offset += PAGE;
+  }
+  return keys;
+}
+
 async function startCsvImport() {
-  const rows = getCsvFiltered();
-  if (!rows.length) { alert('取込対象がありません'); return; }
+  const allRows = getCsvFiltered();
+  if (!allRows.length) { alert('取込対象がありません'); return; }
 
   const btn = document.getElementById('csv-import-btn');
   btn.disabled = true;
@@ -631,6 +665,33 @@ async function startCsvImport() {
   pw.style.display  = 'block';
   log.style.display = 'block';
   log.innerHTML = '';
+
+  // ━━ 重複チェック: 既存DBデータと照合してスキップ ━━
+  let rows, skipped = 0;
+  try {
+    appendLog('csv-log', '既存データを照会中...', 'ok');
+    const existing = await fetchExistingMealKeys();
+    rows = allRows.filter(r => {
+      const dup = existing.has(
+        mealDupKey(r.measured_at, r.meal_type, r.menu_name, r.calories_kcal));
+      if (dup) skipped++;
+      return !dup;
+    });
+    appendLog('csv-log',
+      `重複チェック完了 — 新規: ${rows.length}件 / スキップ(既存): ${skipped}件`, 'ok');
+  } catch(e) {
+    appendLog('csv-log', `✗ 既存データ照会エラー: ${e.message} — 取込を中止しました`, 'err');
+    btn.textContent = '取込実行';
+    btn.disabled = false;
+    return;
+  }
+
+  if (!rows.length) {
+    appendLog('csv-log', '新規データなし — すべて取込済みです', 'ok');
+    btn.textContent = '取込実行';
+    btn.disabled = false;
+    return;
+  }
 
   let inserted = 0, errors = 0;
   const CHUNK = 50;
@@ -657,7 +718,9 @@ async function startCsvImport() {
     pb.style.width = Math.round(Math.min(i+CHUNK,rows.length)/rows.length*100) + '%';
   }
 
-  appendLog('csv-log', `完了 — 取込: ${inserted}件 / エラー: ${errors}件`, inserted > 0 ? 'ok' : 'err');
+  appendLog('csv-log',
+    `完了 — 新規取込: ${inserted}件 / スキップ(既存): ${skipped}件 / エラー: ${errors}件`,
+    errors === 0 ? 'ok' : 'err');
   btn.textContent = '取込実行';
   btn.disabled = false;
   loadMealsStats();
