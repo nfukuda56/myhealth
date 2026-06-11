@@ -1,144 +1,180 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>myhealth</title>
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>myhealth</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- ヘッダ: ロゴ + 日付ナビ + サインアウト -->
-  <header class="app-header">
-    <div style="display:flex;align-items:center;gap:20px">
-      <span class="logo">myhealth</span>
-      <nav class="date-nav">
-        <button id="prev-btn" class="date-nav-btn" title="前日">‹</button>
-        <span id="date-display" class="date-display">—</span>
-        <button id="next-btn" class="date-nav-btn" title="翌日">›</button>
-        <button id="today-btn" class="today-btn">今日</button>
-      </nav>
+<!-- ヘッダ: ロゴ + 日付ナビ + サインアウト -->
+<header class="app-header">
+  <div style="display:flex;align-items:center;gap:20px">
+    <span class="logo">myhealth</span>
+    <nav class="date-nav">
+      <button id="prev-btn" class="date-nav-btn" title="前日">‹</button>
+      <span id="date-display" class="date-display">—</span>
+      <button id="next-btn" class="date-nav-btn" title="翌日">›</button>
+      <button id="today-btn" class="today-btn">今日</button>
+    </nav>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <!-- ★ 入力画面QRボタン -->
+    <button id="qr-open-btn" class="signout-btn" title="スマホ入力画面を開く"
+      style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent)">
+      📱 入力
+    </button>
+    <button id="import-open-btn" class="signout-btn" title="Notion CSV 取込"
+      style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent)">
+      ↑ CSV取込
+    </button>
+    <button id="signout-btn" class="signout-btn">サインアウト</button>
+  </div>
+</header>
+
+<!-- ★ QRコードモーダル -->
+<div id="qr-modal-overlay"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
+              padding:1.75rem 2rem;width:min(340px,92vw);text-align:center;position:relative">
+    <button id="qr-close-btn"
+      style="position:absolute;top:12px;right:14px;background:none;border:none;
+             color:var(--text-muted);font-size:1.3rem;cursor:pointer;line-height:1">×</button>
+    <div style="font-family:var(--mono);font-size:0.78rem;color:var(--accent);
+                letter-spacing:0.08em;margin-bottom:1.1rem">MOBILE INPUT</div>
+    <div id="qr-canvas-wrap"
+      style="display:inline-block;padding:14px;background:#fff;border-radius:8px;
+             margin-bottom:1.1rem">
+      <canvas id="qr-canvas"></canvas>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button id="import-open-btn" class="signout-btn" title="Notion CSV 取込" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent)">↑ CSV取込</button>
-      <button id="signout-btn" class="signout-btn">サインアウト</button>
+    <div id="qr-url-label"
+      style="font-family:var(--mono);font-size:0.68rem;color:var(--text-muted);
+             word-break:break-all;margin-bottom:1rem;line-height:1.5"></div>
+    <button id="qr-copy-btn"
+      style="padding:0.45rem 1.1rem;font-family:var(--mono);font-size:0.75rem;
+             background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);
+             border-radius:6px;cursor:pointer">
+      URLをコピー
+    </button>
+    <div id="qr-copy-msg"
+      style="font-size:0.72rem;color:var(--accent);margin-top:0.5rem;
+             min-height:1.2em;font-family:var(--mono)"></div>
+  </div>
+</div>
+
+<!-- CSV取込モーダル -->
+<div class="modal-overlay" id="import-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center">
+  <div id="import-modal" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;width:min(480px,94vw);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
+      <span style="font-family:var(--mono);font-size:0.8rem;color:var(--accent);letter-spacing:0.08em">NOTION CSV 取込（meals）</span>
+      <button id="import-close-btn" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;line-height:1">×</button>
     </div>
-  </header>
+    <div style="border:1px dashed var(--border);border-radius:6px;padding:1rem;text-align:center;position:relative;margin-bottom:0.75rem">
+      <input type="file" id="import-csv-file" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%">
+      <p style="font-size:0.78rem;color:var(--text-muted)">Notionエクスポート CSV をドロップ or クリックして選択</p>
+      <div id="import-file-name" style="font-family:var(--mono);font-size:0.72rem;color:var(--accent);margin-top:0.4rem"></div>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.4rem">日付フィルター（空欄 = 全件）</div>
+    <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem">
+      <label style="font-size:0.75rem;color:var(--text-muted)">開始日</label>
+      <input type="date" id="import-from" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:0.78rem;padding:0.3rem 0.5rem">
+      <label style="font-size:0.75rem;color:var(--text-muted)">終了日</label>
+      <input type="date" id="import-to" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:0.78rem;padding:0.3rem 0.5rem">
+      <button id="import-clear-dates" style="padding:0.3rem 0.7rem;font-family:var(--mono);font-size:0.7rem;background:var(--warn-dim);border:1px solid var(--warn);color:var(--warn);border-radius:4px;cursor:pointer">クリア</button>
+    </div>
+    <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:0.6rem">
+      <button id="import-exec-btn" disabled style="padding:0.5rem 1rem;font-family:var(--mono);font-size:0.78rem;background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);border-radius:6px;cursor:pointer">取込実行</button>
+      <span id="import-preview" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--mono)"></span>
+    </div>
+    <div id="import-progress-wrap" style="background:var(--border);border-radius:4px;height:3px;margin:0.5rem 0;overflow:hidden;display:none">
+      <div id="import-progress-bar" style="height:100%;width:0%;background:var(--accent);transition:width 0.2s;border-radius:4px"></div>
+    </div>
+    <div id="import-log" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0.7rem 1rem;font-family:var(--mono);font-size:0.7rem;line-height:1.9;max-height:180px;overflow-y:auto;display:none;margin-top:0.5rem"></div>
+  </div>
+</div>
 
-  <!-- CSV取込モーダル -->
-  <div class="modal-overlay" id="import-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center">
-    <div id="import-modal" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;width:min(480px,94vw);max-height:90vh;overflow-y:auto">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
-        <span style="font-family:var(--mono);font-size:0.8rem;color:var(--accent);letter-spacing:0.08em">NOTION CSV 取込（meals）</span>
-        <button id="import-close-btn" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;line-height:1">×</button>
-      </div>
-
-      <div style="border:1px dashed var(--border);border-radius:6px;padding:1rem;text-align:center;position:relative;margin-bottom:0.75rem">
-        <input type="file" id="import-csv-file" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%">
-        <p style="font-size:0.78rem;color:var(--text-muted)">Notionエクスポート CSV をドロップ or クリックして選択</p>
-        <div id="import-file-name" style="font-family:var(--mono);font-size:0.72rem;color:var(--accent);margin-top:0.4rem"></div>
-      </div>
-
-      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.4rem">日付フィルター（空欄 = 全件）</div>
-      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem">
-        <label style="font-size:0.75rem;color:var(--text-muted)">開始日</label>
-        <input type="date" id="import-from" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:0.78rem;padding:0.3rem 0.5rem">
-        <label style="font-size:0.75rem;color:var(--text-muted)">終了日</label>
-        <input type="date" id="import-to"   style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:0.78rem;padding:0.3rem 0.5rem">
-        <button id="import-clear-dates" style="padding:0.3rem 0.7rem;font-family:var(--mono);font-size:0.7rem;background:var(--warn-dim);border:1px solid var(--warn);color:var(--warn);border-radius:4px;cursor:pointer">クリア</button>
-      </div>
-
-      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:0.6rem">
-        <button id="import-exec-btn" disabled style="padding:0.5rem 1rem;font-family:var(--mono);font-size:0.78rem;background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);border-radius:6px;cursor:pointer">取込実行</button>
-        <span id="import-preview" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--mono)"></span>
-      </div>
-
-      <div id="import-progress-wrap" style="background:var(--border);border-radius:4px;height:3px;margin:0.5rem 0;overflow:hidden;display:none">
-        <div id="import-progress-bar" style="height:100%;width:0%;background:var(--accent);transition:width 0.2s;border-radius:4px"></div>
-      </div>
-      <div id="import-log" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0.7rem 1rem;font-family:var(--mono);font-size:0.7rem;line-height:1.9;max-height:180px;overflow-y:auto;display:none;margin-top:0.5rem"></div>
+<!-- メイン: 2カラム -->
+<main class="app-main">
+  <div class="col-left">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Daily Summary</span></div>
+      <div id="summary-content"><div class="loading">読み込み中...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Timeline</span></div>
+      <div id="timeline-content"><div class="loading">読み込み中...</div></div>
     </div>
   </div>
-
-  <!-- メイン: 2カラム -->
-  <main class="app-main">
-
-    <!-- 左カラム: サマリー + (入力フォームは後フェーズ) -->
-    <div class="col-left">
-
-      <!-- 日次サマリー -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Daily Summary</span>
-        </div>
-        <div id="summary-content">
-          <div class="loading">読み込み中...</div>
-        </div>
-      </div>
-
-      <!-- タイムライン -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Timeline</span>
-        </div>
-        <div id="timeline-content">
-          <div class="loading">読み込み中...</div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- 右カラム: グラフ + タイムライン -->
-    <div class="col-right">
-
-      <!-- グラフエリア -->
-      <div class="card">
-        <div class="card-header">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <span class="card-title">Trend</span>
-            <div class="chart-tabs" id="chart-tabs">
-              <button class="chart-tab active" data-metric="weight">体重</button>
-              <button class="chart-tab" data-metric="body_fat_pct">体脂肪率</button>
-              <button class="chart-tab" data-metric="fat_mass">体脂肪量</button>
-              <button class="chart-tab" data-metric="lean_body_mass">除脂肪体重</button>
-            </div>
-          </div>
-          <div class="chart-period-tabs" id="period-tabs">
-            <button class="chart-period-tab" data-days="7">7日</button>
-            <button class="chart-period-tab active" data-days="30">30日</button>
-            <button class="chart-period-tab" data-days="90">90日</button>
-            <button class="chart-period-tab" data-days="180">180日</button>
+  <div class="col-right">
+    <div class="card">
+      <div class="card-header">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="card-title">Trend</span>
+          <div class="chart-tabs" id="chart-tabs">
+            <button class="chart-tab active" data-metric="weight">体重</button>
+            <button class="chart-tab" data-metric="body_fat_pct">体脂肪率</button>
+            <button class="chart-tab" data-metric="fat_mass">体脂肪量</button>
+            <button class="chart-tab" data-metric="lean_body_mass">除脂肪体重</button>
           </div>
         </div>
-        <div style="position:relative;height:300px">
-          <canvas id="trend-chart"></canvas>
+        <div class="chart-period-tabs" id="period-tabs">
+          <button class="chart-period-tab" data-days="7">7日</button>
+          <button class="chart-period-tab active" data-days="30">30日</button>
+          <button class="chart-period-tab" data-days="90">90日</button>
+          <button class="chart-period-tab" data-days="180">180日</button>
         </div>
       </div>
-
-
+      <div style="position:relative;height:300px"><canvas id="trend-chart"></canvas></div>
     </div>
-  </main>
+  </div>
+</main>
 
-  <style>
-    #import-modal-overlay.show { display: flex !important; }
-    #import-exec-btn:not(:disabled):hover { background: var(--accent); color: #0f1117; }
-    .log-ok   { color: var(--accent); }
-    .log-err  { color: var(--danger); }
-    .log-info { color: var(--text-muted); }
-    .log-warn { color: var(--warn); }
-  </style>
+<style>
+  #import-modal-overlay.show { display: flex !important; }
+  #qr-modal-overlay.show     { display: flex !important; }
+  #import-exec-btn:not(:disabled):hover { background: var(--accent); color: #0f1117; }
+  .log-ok   { color: var(--accent); }
+  .log-err  { color: var(--danger); }
+  .log-info { color: var(--text-muted); }
+  .log-warn { color: var(--warn); }
+</style>
 
-  <!-- Chart.js (UMD: window.Chart として利用) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
-  <!-- グラフモジュール（window.refreshCharts を先に定義） -->
-  <script type="module" src="js/modules/charts.js?v=6"></script>
+<script>
+(function () {
+  const INPUT_URL = 'https://nfukuda56.github.io/myhealth/input.html';
+  let qrGenerated = false;
+  function openQR() {
+    document.getElementById('qr-modal-overlay').classList.add('show');
+    document.getElementById('qr-url-label').textContent = INPUT_URL;
+    if (!qrGenerated) {
+      QRCode.toCanvas(document.getElementById('qr-canvas'), INPUT_URL,
+        { width: 220, margin: 0, color: { dark: '#000000', light: '#ffffff' } },
+        function (err) { if (err) console.error('QR生成エラー:', err); });
+      qrGenerated = true;
+    }
+  }
+  function closeQR() { document.getElementById('qr-modal-overlay').classList.remove('show'); }
+  document.getElementById('qr-modal-overlay').addEventListener('click', function (e) { if (e.target === this) closeQR(); });
+  document.getElementById('qr-open-btn').addEventListener('click', openQR);
+  document.getElementById('qr-close-btn').addEventListener('click', closeQR);
+  document.getElementById('qr-copy-btn').addEventListener('click', function () {
+    navigator.clipboard.writeText(INPUT_URL).then(function () {
+      const msg = document.getElementById('qr-copy-msg');
+      msg.textContent = 'コピーしました ✓';
+      setTimeout(function () { msg.textContent = ''; }, 2000);
+    });
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeQR(); });
+})();
+</script>
 
-  <!-- CSV取込モジュール -->
-  <script type="module" src="js/modules/import.js?v=2"></script>
-
-  <!-- アプリ本体 -->
-  <script type="module" src="js/app.js"></script>
+<script type="module" src="js/modules/charts.js?v=6"></script>
+<script type="module" src="js/modules/import.js?v=2"></script>
+<script type="module" src="js/app.js"></script>
 
 </body>
 </html>
