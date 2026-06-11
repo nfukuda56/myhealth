@@ -110,6 +110,11 @@ async function startImport() {
   const rows = getCsvFiltered()
   if (!rows.length) { alert('取込対象がありません'); return }
 
+  // RLSポリシーに必要な user_id を取得
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) { alert('ログインが必要です'); return }
+  const userId = user.id
+
   const btn = document.getElementById('import-exec-btn')
   btn.disabled = true
   btn.textContent = '取込中...'
@@ -125,7 +130,7 @@ async function startImport() {
   const CHUNK = 50
 
   for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK)
+    const chunk = rows.slice(i, i + CHUNK).map(r => ({ ...r, user_id: userId }))
     const { error } = await supabase
       .from('meals')
       .insert(chunk)
@@ -174,3 +179,50 @@ document.getElementById('import-clear-dates').addEventListener('click', () => {
   updatePreview()
 })
 document.getElementById('import-exec-btn').addEventListener('click', startImport)
+
+// ── QRコードモーダル ──────────────────────────
+const INPUT_URL = 'https://nfukuda56.github.io/myhealth/input.html'
+
+function openQrModal() {
+  const overlay = document.getElementById('qr-modal-overlay')
+  overlay.style.display = 'flex'
+  document.getElementById('qr-url-input').value = INPUT_URL
+
+  const container = document.getElementById('qr-code-container')
+  container.innerHTML = ''
+  // QRコード生成（qrcode.js CDN使用）
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(container, {
+      text: INPUT_URL,
+      width: 200,
+      height: 200,
+      colorDark: '#1a5c3a',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    })
+  } else {
+    // フォールバック: Google Charts API
+    const img = document.createElement('img')
+    img.src = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(INPUT_URL)}&chco=1a5c3a`
+    img.alt = 'QR Code'
+    img.style.borderRadius = '6px'
+    container.appendChild(img)
+  }
+}
+
+function closeQrModal() {
+  document.getElementById('qr-modal-overlay').style.display = 'none'
+}
+
+document.getElementById('input-open-btn').addEventListener('click', openQrModal)
+document.getElementById('qr-close-btn').addEventListener('click', closeQrModal)
+document.getElementById('qr-modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeQrModal()
+})
+document.getElementById('qr-copy-btn').addEventListener('click', () => {
+  navigator.clipboard.writeText(INPUT_URL).then(() => {
+    const btn = document.getElementById('qr-copy-btn')
+    btn.textContent = 'コピー済'
+    setTimeout(() => { btn.textContent = 'コピー' }, 2000)
+  })
+})
