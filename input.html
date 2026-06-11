@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>myhealth — 入力</title>
+  <style>
+    :root {
+      --accent: #1a5c3a;
+      --accent-light: #e8f4ee;
+      --text: #1a1a18;
+      --text-sub: #6b6b67;
+      --text-hint: #a0a09c;
+      --surface: #ffffff;
+      --bg: #f7f6f3;
+      --danger: #991b1b;
+      --danger-light: #fef2f2;
+      --border: #e2e1dd;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+    }
+
+    /* ── 認証画面 ── */
+    #auth-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 1.5rem;
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      width: 100%;
+      max-width: 360px;
+    }
+    .auth-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      margin-bottom: 0.3rem;
+    }
+    .form-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--surface);
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    #auth-error {
+      font-size: 0.8rem;
+      color: var(--danger);
+      margin-bottom: 0.8rem;
+      min-height: 1.2em;
+    }
+
+    /* ── メイン画面 ── */
+    #main-screen { display: none; }
+
+    /* ── ヘッダ ── */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .date-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .date-nav-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .date-display {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      padding: 0 4px;
+    }
+    .signout-btn {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text-sub);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ── タブ ── */
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 53px;
+      z-index: 90;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.75rem;
+      font-size: 0.9rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--text-sub);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── コンテンツラッパ ── */
+    .tab-content { display: none; padding: 1rem; max-width: 420px; margin: 0 auto; }
+    .tab-content.active { display: block; }
+
+    /* ── カード ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .card-label {
+      font-size: 0.72rem;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ── 食事区分セレクター ── */
+    .meal-type-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .meal-type-btn {
+      flex: 1;
+      min-width: 60px;
+      padding: 0.45rem 0.2rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--text-sub);
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .meal-type-btn.active {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── 品目カード ── */
+    .item-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-bottom: 0.6rem;
+      position: relative;
+    }
+    .item-name-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+    .item-name-input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.7rem;
+      font-size: 1rem;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+    }
+    .item-name-input:focus { border-color: var(--accent); }
+    .item-delete-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 34px;
+      height: 34px;
+      font-size: 1rem;
+      cursor: pointer;
+      color: var(--text-hint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .item-delete-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+    /* PFC行 */
+    .pfc-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 0.5rem;
+    }
+    .pfc-cell { display: flex; flex-direction: column; gap: 2px; }
+    .pfc-label {
+      font-size: 14px;
+      color: var(--text-sub);
+      text-align: center;
+    }
+    .pfc-input {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.3rem;
+      font-size: 20px;
+      text-align: center;
+      background: var(--surface);
+      color: var(--text);
+      width: 100%;
+      outline: none;
+    }
+    .pfc-input:focus { border-color: var(--accent); }
+    .item-memo-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.4rem 0.7rem;
+      font-size: 0.88rem;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+    }
+    .item-memo-input:focus { border-color: var(--accent); }
+
+    /* サジェストドロップダウン */
+    .suggest-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 40px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      z-index: 200;
+      overflow: hidden;
+      display: none;
+    }
+    .suggest-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0.8rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .suggest-item:last-child { border-bottom: none; }
+    .suggest-item:hover, .suggest-item:active { background: var(--accent-light); }
+    .suggest-name { color: var(--text); }
+    .suggest-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--text-sub);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+    .suggest-badge {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.7rem;
+    }
+
+    /* 品目追加ボタン */
+    .add-item-btn {
+      width: 100%;
+      padding: 0.65rem;
+      border: 1px dashed var(--accent);
+      border-radius: 8px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-bottom: 0.75rem;
+    }
+
+    /* 合計サマリー */
+    #meal-summary {
+      background: var(--accent-light);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.75rem;
+      display: none;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      text-align: center;
+    }
+    .summary-label { font-size: 0.72rem; color: var(--text-sub); }
+    .summary-value { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+
+    /* タグ */
+    .tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 0.4rem;
+    }
+    .tag-btn {
+      padding: 0.3rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--text-sub);
+      transition: all 0.15s;
+    }
+    .tag-btn.active {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* 保存ボタン */
+    .save-btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.15s;
+    }
+    .save-btn:active { opacity: 0.85; }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* スピナー */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* トースト */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--text);
+      color: #fff;
+      padding: 0.65rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s;
+      white-space: nowrap;
+      max-width: 90vw;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* 基礎代謝タブ */
+    .bmr-history-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bmr-card-left { flex: 1; }
+    .bmr-card-datetime { font-size: 0.82rem; color: var(--text-sub); }
+    .bmr-card-value { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+    .bmr-card-device { font-size: 0.78rem; color: var(--text-hint); margin-top: 2px; }
+    .applied-badge {
+      font-size: 0.7rem;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .bmr-delete-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.78rem;
+      color: var(--danger);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .bmr-delete-btn:hover { background: var(--danger-light); }
+    .empty-msg {
+      text-align: center;
+      color: var(--text-hint);
+      font-size: 0.9rem;
+      padding: 1.5rem 0;
+    }
+
+    /* 機器名サジェスト */
+    .device-suggest-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      z-index: 200;
+      overflow: hidden;
+      display: none;
+    }
+    .device-suggest-item {
+      padding: 0.6rem 0.8rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .device-suggest-item:last-child { border-bottom: none; }
+    .device-suggest-item:hover { background: var(--accent-light); }
+
+    /* バリデーションエラー */
+    .field-error {
+      font-size: 0.75rem;
+      color: var(--danger);
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── トースト ── -->
+<div id="toast"></div>
+
+<!-- ── 認証画面 ── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-title">🥗 myhealth 入力</div>
+    <label class="form-label" for="email-input">メールアドレス</label>
+    <input class="form-input" id="email-input" type="email" autocomplete="username" placeholder="name@example.com">
+    <label class="form-label" for="password-input">パスワード</label>
+    <input class="form-input" id="password-input" type="password" autocomplete="current-password" placeholder="••••••••">
+    <div id="auth-error"></div>
+    <button class="save-btn" id="signin-btn">サインイン</button>
+  </div>
+</div>
+
+<!-- ── メイン画面 ── -->
+<div id="main-screen">
+
+  <!-- ヘッダ -->
+  <header class="app-header">
+    <nav class="date-nav">
+      <button class="date-nav-btn" id="prev-day">‹</button>
+      <span class="date-display" id="date-display">—</span>
+      <button class="date-nav-btn" id="next-day">›</button>
+    </nav>
+    <button class="signout-btn" id="signout-btn">サインアウト</button>
+  </header>
+
+  <!-- タブバー -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="meals">🍽 食事</button>
+    <button class="tab-btn" data-tab="bmr">🔥 基礎代謝</button>
+  </div>
+
+  <!-- ═══ 食事タブ ═══ -->
+  <div class="tab-content active" id="tab-meals">
+
+    <!-- 食事区分 -->
+    <div class="card">
+      <div class="card-label">食事区分</div>
+      <div class="meal-type-row" id="meal-type-row">
+        <button class="meal-type-btn active" data-type="breakfast">朝食</button>
+        <button class="meal-type-btn" data-type="lunch">昼食</button>
+        <button class="meal-type-btn" data-type="dinner">夕食</button>
+        <button class="meal-type-btn" data-type="snack">間食</button>
+      </div>
+    </div>
+
+    <!-- 日時 -->
+    <div class="card">
+      <div class="card-label">食事日時</div>
+      <input class="form-input" id="meal-datetime" type="datetime-local" style="margin-bottom:0">
+    </div>
+
+    <!-- 品目リスト -->
+    <div id="item-list"></div>
+
+    <!-- 品目追加 -->
+    <button class="add-item-btn" id="add-item-btn">＋ 品目を追加</button>
+
+    <!-- 合計サマリー -->
+    <div id="meal-summary">
+      <div class="summary-grid">
+        <div class="summary-label">kcal</div>
+        <div class="summary-label">P</div>
+        <div class="summary-label">F</div>
+        <div class="summary-label">C</div>
+        <div class="summary-value" id="sum-kcal">—</div>
+        <div class="summary-value" id="sum-p">—</div>
+        <div class="summary-value" id="sum-f">—</div>
+        <div class="summary-value" id="sum-c">—</div>
+      </div>
+    </div>
+
+    <!-- メモ・タグ -->
+    <div class="card">
+      <div class="card-label">食事メモ</div>
+      <input class="form-input" id="meal-memo" type="text" placeholder="任意メモ" style="margin-bottom:0.75rem">
+      <div class="card-label">タグ（複数選択可）</div>
+      <div class="tags-row" id="tags-row">
+        <button class="tag-btn" data-tag="飲酒">飲酒</button>
+        <button class="tag-btn" data-tag="会食">会食</button>
+        <button class="tag-btn" data-tag="外食">外食</button>
+        <button class="tag-btn" data-tag="高糖質">高糖質</button>
+        <button class="tag-btn" data-tag="低糖質">低糖質</button>
+        <button class="tag-btn" data-tag="塩分多め">塩分多め</button>
+        <button class="tag-btn" data-tag="間食多め">間食多め</button>
+      </div>
+    </div>
+
+    <!-- 保存ボタン -->
+    <button class="save-btn" id="meal-save-btn">この食事を保存</button>
+    <div style="height:2rem"></div>
+  </div>
+
+  <!-- ═══ 基礎代謝タブ ═══ -->
+  <div class="tab-content" id="tab-bmr">
+
+    <!-- 現在の適用値・履歴 -->
+    <div class="card">
+      <div class="card-label">記録履歴</div>
+      <div id="bmr-history-list"><div class="empty-msg">読み込み中...</div></div>
+    </div>
+
+    <!-- 新規記録フォーム -->
+    <div class="card">
+      <div class="card-label">新規記録</div>
+
+      <label class="form-label" for="bmr-datetime">計測日時</label>
+      <input class="form-input" id="bmr-datetime" type="datetime-local">
+
+      <label class="form-label" for="bmr-value">基礎代謝（kcal/日）</label>
+      <input class="form-input" id="bmr-value" type="number" inputmode="numeric" min="800" max="4000" placeholder="例: 1680" style="font-size:1.3rem">
+      <div class="field-error" id="bmr-value-error"></div>
+
+      <label class="form-label" for="bmr-device" style="margin-top:0.5rem">計測機器（任意）</label>
+      <div style="position:relative">
+        <input class="form-input" id="bmr-device" type="text" placeholder="例: タニタ BC-768" autocomplete="off" style="margin-bottom:0">
+        <div class="device-suggest-dropdown" id="device-suggest"></div>
+      </div>
+
+      <label class="form-label" for="bmr-memo" style="margin-top:0.75rem">メモ（任意）</label>
+      <input class="form-input" id="bmr-memo" type="text" placeholder="任意メモ" style="margin-bottom:0">
+    </div>
+
+    <button class="save-btn" id="bmr-save-btn">基礎代謝を記録</button>
+    <div style="height:2rem"></div>
+  </div>
+
+</div><!-- /main-screen -->
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+const SUPABASE_URL = 'https://lvmgfolwipwgyhhzskvj.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_q1QSXYVIMPtuf5D7pYmcnw_oijyIXYx'
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ── ユーティリティ ──────────────────────────────
+
+function toLocalDatetimeValue(date = new Date()) {
+  const pad = n => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function localToUTC(localStr) {
+  return new Date(localStr).toISOString()
+}
+
+function formatDate(date) {
+  const days = ['日','月','火','水','木','金','土']
+  const today = new Date()
+  const isToday = date.toDateString() === today.toDateString()
+  const m = date.getMonth() + 1
+  const d = date.getDate()
+  const w = days[date.getDay()]
+  return `${m}月${d}日（${w}）${isToday ? ' 今日' : ''}`
+}
+
+let toastTimer = null
+function showToast(msg) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800)
+}
+
+// ── 日付ナビ ───────────────────────────────────
+
+let currentDate = new Date()
+currentDate.setHours(0, 0, 0, 0)
+
+function updateDateDisplay() {
+  document.getElementById('date-display').textContent = formatDate(currentDate)
+  // 食事日時のデフォルトも現在日時に合わせる（日付変更時は0時に設定）
+  const now = new Date()
+  const isSameDay = now.toDateString() === currentDate.toDateString()
+  const ref = isSameDay ? now : new Date(currentDate)
+  document.getElementById('meal-datetime').value = toLocalDatetimeValue(ref)
+}
+
+document.getElementById('prev-day').addEventListener('click', () => {
+  currentDate.setDate(currentDate.getDate() - 1)
+  updateDateDisplay()
+})
+document.getElementById('next-day').addEventListener('click', () => {
+  currentDate.setDate(currentDate.getDate() + 1)
+  updateDateDisplay()
+})
+
+// ── タブ切り替え ───────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+    btn.classList.add('active')
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active')
+    if (btn.dataset.tab === 'bmr') loadBmrHistory()
+  })
+})
+
+// ── 認証 ──────────────────────────────────────
+
+async function initAuth() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session) {
+    showMain()
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex'
+  }
+}
+
+function showMain() {
+  document.getElementById('auth-screen').style.display = 'none'
+  document.getElementById('main-screen').style.display = 'block'
+  updateDateDisplay()
+  initMealForm()
+  document.getElementById('bmr-datetime').value = toLocalDatetimeValue()
+}
+
+document.getElementById('signin-btn').addEventListener('click', async () => {
+  const email = document.getElementById('email-input').value.trim()
+  const password = document.getElementById('password-input').value
+  const errEl = document.getElementById('auth-error')
+  const btn = document.getElementById('signin-btn')
+  errEl.textContent = ''
+  btn.disabled = true
+  btn.innerHTML = '<div class="spinner"></div>'
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  btn.disabled = false
+  btn.textContent = 'サインイン'
+  if (error) {
+    errEl.textContent = 'メールアドレスまたはパスワードが正しくありません'
+  } else {
+    showMain()
+  }
+})
+
+document.getElementById('password-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('signin-btn').click()
+})
+
+document.getElementById('signout-btn').addEventListener('click', async () => {
+  await supabase.auth.signOut()
+  document.getElementById('main-screen').style.display = 'none'
+  document.getElementById('auth-screen').style.display = 'flex'
+})
+
+// ── 食事区分 ──────────────────────────────────
+
+let selectedMealType = 'breakfast'
+document.getElementById('meal-type-row').addEventListener('click', e => {
+  const btn = e.target.closest('.meal-type-btn')
+  if (!btn) return
+  document.querySelectorAll('.meal-type-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  selectedMealType = btn.dataset.type
+})
+
+// ── タグ ──────────────────────────────────────
+
+const selectedTags = new Set()
+document.getElementById('tags-row').addEventListener('click', e => {
+  const btn = e.target.closest('.tag-btn')
+  if (!btn) return
+  const tag = btn.dataset.tag
+  if (selectedTags.has(tag)) {
+    selectedTags.delete(tag)
+    btn.classList.remove('active')
+  } else {
+    selectedTags.add(tag)
+    btn.classList.add('active')
+  }
+})
+
+// ── 品目カード ────────────────────────────────
+
+let itemCardCount = 0
+let suggestCache = {}
+
+function createItemCard() {
+  const id = ++itemCardCount
+  const card = document.createElement('div')
+  card.className = 'item-card'
+  card.dataset.id = id
+  card.innerHTML = `
+    <div class="item-name-row">
+      <input class="item-name-input" type="text" placeholder="品目名" autocomplete="off" data-suggest-id="${id}">
+      <button class="item-delete-btn" data-delete="${id}" title="削除">×</button>
+      <div class="suggest-dropdown" id="suggest-${id}"></div>
+    </div>
+    <div class="pfc-row">
+      <div class="pfc-cell">
+        <div class="pfc-label">kcal</div>
+        <input class="pfc-input" type="number" inputmode="decimal" placeholder="—" data-field="kcal">
+      </div>
+      <div class="pfc-cell">
+        <div class="pfc-label">P</div>
+        <input class="pfc-input" type="number" inputmode="decimal" placeholder="—" data-field="p">
+      </div>
+      <div class="pfc-cell">
+        <div class="pfc-label">F</div>
+        <input class="pfc-input" type="number" inputmode="decimal" placeholder="—" data-field="f">
+      </div>
+      <div class="pfc-cell">
+        <div class="pfc-label">C</div>
+        <input class="pfc-input" type="number" inputmode="decimal" placeholder="—" data-field="c">
+      </div>
+    </div>
+    <input class="item-memo-input" type="text" placeholder="品目メモ（任意）">
+  `
+
+  // 品目名入力 → サジェスト
+  const nameInput = card.querySelector('.item-name-input')
+  const dropdown = card.querySelector('.suggest-dropdown')
+  let suggestTimer = null
+  let closeTimer = null
+
+  nameInput.addEventListener('input', async () => {
+    const q = nameInput.value.trim()
+    if (q.length === 0) { dropdown.style.display = 'none'; return }
+    if (suggestTimer) clearTimeout(suggestTimer)
+    suggestTimer = setTimeout(() => fetchSuggest(q, id, card, dropdown), 180)
+  })
+  nameInput.addEventListener('blur', () => {
+    closeTimer = setTimeout(() => { dropdown.style.display = 'none' }, 200)
+  })
+  nameInput.addEventListener('focus', () => {
+    if (closeTimer) clearTimeout(closeTimer)
+  })
+
+  // PFC変更 → サマリー更新
+  card.querySelectorAll('.pfc-input').forEach(inp => {
+    inp.addEventListener('input', updateSummary)
+  })
+
+  // 削除ボタン
+  card.querySelector('.item-delete-btn').addEventListener('click', () => {
+    const list = document.getElementById('item-list')
+    if (list.children.length <= 1) { showToast('⚠️ 品目は1件以上必要です'); return }
+    card.remove()
+    updateSummary()
+  })
+
+  return card
+}
+
+async function fetchSuggest(query, cardId, card, dropdown) {
+  try {
+    const { data, error } = await supabase.rpc('suggest_meal_items', { p_query: query, p_limit: 6 })
+    if (error || !data || data.length === 0) { dropdown.style.display = 'none'; return }
+    dropdown.innerHTML = data.map(item => `
+      <div class="suggest-item" data-name="${escHtml(item.menu_name)}"
+           data-kcal="${item.avg_kcal ?? ''}"
+           data-p="${item.avg_protein ?? ''}"
+           data-f="${item.avg_fat ?? ''}"
+           data-c="${item.avg_carbs ?? ''}">
+        <span class="suggest-name">${escHtml(item.menu_name)}</span>
+        <span class="suggest-meta">
+          <span class="suggest-badge">${item.use_count}回</span>
+          ${item.avg_kcal ? Math.round(item.avg_kcal) + ' kcal' : ''}
+        </span>
+      </div>
+    `).join('')
+    dropdown.querySelectorAll('.suggest-item').forEach(si => {
+      si.addEventListener('mousedown', e => {
+        e.preventDefault()
+        const nameInput = card.querySelector('.item-name-input')
+        nameInput.value = si.dataset.name
+        const fill = (field, val) => {
+          if (!val) return
+          const inp = card.querySelector(`.pfc-input[data-field="${field}"]`)
+          if (inp) inp.value = parseFloat(val).toFixed(1)
+        }
+        fill('kcal', si.dataset.kcal)
+        fill('p', si.dataset.p)
+        fill('f', si.dataset.f)
+        fill('c', si.dataset.c)
+        dropdown.style.display = 'none'
+        updateSummary()
+      })
+    })
+    dropdown.style.display = 'block'
+  } catch(e) {
+    dropdown.style.display = 'none'
+  }
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+function initMealForm() {
+  const list = document.getElementById('item-list')
+  list.innerHTML = ''
+  itemCardCount = 0
+  list.appendChild(createItemCard())
+  updateSummary()
+}
+
+document.getElementById('add-item-btn').addEventListener('click', () => {
+  document.getElementById('item-list').appendChild(createItemCard())
+})
+
+function updateSummary() {
+  const cards = document.querySelectorAll('.item-card')
+  let kcal = 0, p = 0, f = 0, c = 0, hasAny = false
+  cards.forEach(card => {
+    const v = f => { const i = card.querySelector(`.pfc-input[data-field="${f}"]`); return i ? parseFloat(i.value) || 0 : 0 }
+    const k = v('kcal'), pp = v('p'), ff = v('f'), cc = v('c')
+    if (k || pp || ff || cc) hasAny = true
+    kcal += k; p += pp; f += ff; c += cc
+  })
+  const sum = document.getElementById('meal-summary')
+  if (!hasAny) { sum.style.display = 'none'; return }
+  sum.style.display = 'block'
+  document.getElementById('sum-kcal').textContent = Math.round(kcal)
+  document.getElementById('sum-p').textContent = p.toFixed(1) + 'g'
+  document.getElementById('sum-f').textContent = f.toFixed(1) + 'g'
+  document.getElementById('sum-c').textContent = c.toFixed(1) + 'g'
+}
+
+// ── 食事保存 ──────────────────────────────────
+
+document.getElementById('meal-save-btn').addEventListener('click', async () => {
+  const cards = document.querySelectorAll('.item-card')
+  const items = []
+  let valid = true
+
+  cards.forEach(card => {
+    const name = card.querySelector('.item-name-input').value.trim()
+    if (!name) { valid = false; card.querySelector('.item-name-input').focus(); return }
+    const n = f => { const i = card.querySelector(`.pfc-input[data-field="${f}"]`); return i && i.value !== '' ? parseFloat(i.value) : null }
+    items.push({
+      menu_name: name,
+      calories_kcal: n('kcal'),
+      protein_g: n('p'),
+      fat_g: n('f'),
+      carbs_g: n('c'),
+      content: card.querySelector('.item-memo-input').value.trim() || null,
+    })
+  })
+
+  if (!valid) { showToast('⚠️ 品目名を入力してください'); return }
+  if (items.length === 0) { showToast('⚠️ 品目は1件以上必要です'); return }
+
+  const dtVal = document.getElementById('meal-datetime').value
+  if (!dtVal) { showToast('⚠️ 食事日時を入力してください'); return }
+
+  const memo = document.getElementById('meal-memo').value.trim()
+  const tags = [...selectedTags]
+  const memoWithTags = tags.length > 0 ? (memo ? memo + ' ' : '') + tags.join(' ') : (memo || null)
+
+  const measuredAt = localToUTC(dtVal)
+
+  const btn = document.getElementById('meal-save-btn')
+  btn.disabled = true
+  btn.innerHTML = '<div class="spinner"></div> 保存中...'
+
+  const rows = items.map(item => ({
+    ...item,
+    meal_type: selectedMealType,
+    measured_at: measuredAt,
+    memo: memoWithTags,
+    input_source: 'manual',
+  }))
+
+  const { error } = await supabase.from('meals').insert(rows)
+
+  btn.disabled = false
+  btn.textContent = 'この食事を保存'
+
+  if (error) {
+    showToast('❌ 保存に失敗しました: ' + error.message)
+    return
+  }
+
+  showToast('✓ ' + items.length + '品目を保存しました')
+
+  // フォームリセット
+  document.getElementById('meal-datetime').value = toLocalDatetimeValue()
+  document.querySelectorAll('.meal-type-btn').forEach(b => b.classList.remove('active'))
+  document.querySelector('.meal-type-btn[data-type="breakfast"]').classList.add('active')
+  selectedMealType = 'breakfast'
+  document.getElementById('meal-memo').value = ''
+  selectedTags.clear()
+  document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'))
+  initMealForm()
+})
+
+// ── 基礎代謝履歴 ──────────────────────────────
+
+async function loadBmrHistory() {
+  const listEl = document.getElementById('bmr-history-list')
+  listEl.innerHTML = '<div class="empty-msg">読み込み中...</div>'
+  const { data, error } = await supabase
+    .from('body_metrics')
+    .select('id, measured_at, basal_metabolism_kcal, device_name, memo, source')
+    .eq('source', 'manual')
+    .not('basal_metabolism_kcal', 'is', null)
+    .order('measured_at', { ascending: false })
+    .limit(20)
+
+  if (error || !data) {
+    listEl.innerHTML = '<div class="empty-msg">読み込みエラー</div>'
+    return
+  }
+  if (data.length === 0) {
+    listEl.innerHTML = '<div class="empty-msg">まだ記録がありません</div>'
+    return
+  }
+
+  listEl.innerHTML = ''
+  data.forEach((row, idx) => {
+    const dt = new Date(row.measured_at)
+    const days = ['日','月','火','水','木','金','土']
+    const label = `${dt.getMonth()+1}/${dt.getDate()}（${days[dt.getDay()]}） ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
+    const card = document.createElement('div')
+    card.className = 'bmr-history-card'
+    card.innerHTML = `
+      <div class="bmr-card-left">
+        <div class="bmr-card-datetime">
+          ${label}${idx === 0 ? '<span class="applied-badge">適用中</span>' : ''}
+        </div>
+        <div class="bmr-card-value">${row.basal_metabolism_kcal} kcal/日</div>
+        ${row.device_name ? `<div class="bmr-card-device">${escHtml(row.device_name)}</div>` : ''}
+      </div>
+      <button class="bmr-delete-btn" data-id="${row.id}">削除</button>
+    `
+    card.querySelector('.bmr-delete-btn').addEventListener('click', () => deleteBmr(row.id))
+    listEl.appendChild(card)
+  })
+}
+
+async function deleteBmr(id) {
+  if (!confirm('この記録を削除しますか？')) return
+  const { error } = await supabase.rpc('delete_body_metric', { p_id: id })
+  if (error) { showToast('❌ 削除に失敗しました'); return }
+  showToast('✓ 削除しました')
+  loadBmrHistory()
+}
+
+// ── 基礎代謝保存 ──────────────────────────────
+
+document.getElementById('bmr-save-btn').addEventListener('click', async () => {
+  const dtVal = document.getElementById('bmr-datetime').value
+  const valStr = document.getElementById('bmr-value').value
+  const errEl = document.getElementById('bmr-value-error')
+  errEl.textContent = ''
+
+  if (!dtVal) { showToast('⚠️ 計測日時を入力してください'); return }
+  const val = parseInt(valStr, 10)
+  if (!valStr || isNaN(val) || val < 800 || val > 4000) {
+    errEl.textContent = '800〜4000 の範囲で入力してください'
+    document.getElementById('bmr-value').focus()
+    return
+  }
+
+  const device = document.getElementById('bmr-device').value.trim() || null
+  const memo = document.getElementById('bmr-memo').value.trim() || null
+
+  const btn = document.getElementById('bmr-save-btn')
+  btn.disabled = true
+  btn.innerHTML = '<div class="spinner"></div> 保存中...'
+
+  const { error } = await supabase.from('body_metrics').insert({
+    measured_at: localToUTC(dtVal),
+    basal_metabolism_kcal: val,
+    device_name: device,
+    memo: memo,
+    source: 'manual',
+  })
+
+  btn.disabled = false
+  btn.textContent = '基礎代謝を記録'
+
+  if (error) { showToast('❌ 保存に失敗しました: ' + error.message); return }
+
+  showToast('✓ 基礎代謝を記録しました')
+  document.getElementById('bmr-datetime').value = toLocalDatetimeValue()
+  document.getElementById('bmr-value').value = ''
+  document.getElementById('bmr-device').value = ''
+  document.getElementById('bmr-memo').value = ''
+  loadBmrHistory()
+})
+
+// ── 計測機器サジェスト ────────────────────────
+
+const deviceInput = document.getElementById('bmr-device')
+const deviceDropdown = document.getElementById('device-suggest')
+let deviceSuggestTimer = null
+let deviceCloseTimer = null
+
+deviceInput.addEventListener('input', async () => {
+  const q = deviceInput.value.trim()
+  if (q.length === 0) { deviceDropdown.style.display = 'none'; return }
+  if (deviceSuggestTimer) clearTimeout(deviceSuggestTimer)
+  deviceSuggestTimer = setTimeout(async () => {
+    const { data } = await supabase.rpc('suggest_device_names', { p_query: q })
+    if (!data || data.length === 0) { deviceDropdown.style.display = 'none'; return }
+    deviceDropdown.innerHTML = data.slice(0, 5).map(d =>
+      `<div class="device-suggest-item">${escHtml(d.device_name ?? d)}</div>`
+    ).join('')
+    deviceDropdown.querySelectorAll('.device-suggest-item').forEach(item => {
+      item.addEventListener('mousedown', e => {
+        e.preventDefault()
+        deviceInput.value = item.textContent.trim()
+        deviceDropdown.style.display = 'none'
+      })
+    })
+    deviceDropdown.style.display = 'block'
+  }, 180)
+})
+deviceInput.addEventListener('blur', () => {
+  deviceCloseTimer = setTimeout(() => { deviceDropdown.style.display = 'none' }, 200)
+})
+deviceInput.addEventListener('focus', () => {
+  if (deviceCloseTimer) clearTimeout(deviceCloseTimer)
+})
+
+// ── 初期化 ────────────────────────────────────
+
+initAuth()
+</script>
+</body>
+</html>
