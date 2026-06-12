@@ -168,6 +168,7 @@ function buildTrendConfig(labels, metricValues, balanceValues) {
         },
         y: {
           position: 'left',
+          afterFit(scale) { scale.width = 58 },
           ticks: {
             color: '#64748b',
             font: { family: "'DM Mono', monospace", size: 10 },
@@ -178,6 +179,7 @@ function buildTrendConfig(labels, metricValues, balanceValues) {
         },
         yRight: {
           position: 'right',
+          afterFit(scale) { scale.width = 52 },
           ticks: {
             color: '#a78bfa',
             font: { family: "'DM Mono', monospace", size: 10 },
@@ -290,6 +292,7 @@ function buildNutritionConfig(labels, nutrientMap) {
           }
         }
       },
+      layout: { padding: { right: 52 } },
       scales: {
         x: {
           ticks: {
@@ -304,6 +307,7 @@ function buildNutritionConfig(labels, nutrientMap) {
         },
         y: {
           stacked: true,
+          afterFit(scale) { scale.width = 58 },
           ticks: {
             color: '#64748b',
             font: { family: "'DM Mono', monospace", size: 10 },
