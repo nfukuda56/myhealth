@@ -25,6 +25,7 @@ let nutritionInstance = null
 let currentMetric     = 'weight'
 let currentPeriod     = 30
 let currentEndDate    = null
+let currentDates      = []   // 完全日付文字列 (YYYY-MM-DD) の配列
 
 // =============================================
 // 日付ユーティリティ
@@ -129,7 +130,8 @@ function buildTrendConfig(labels, metricValues, balanceValues) {
           padding: 10,
           callbacks: {
             title: ctx => {
-              const dateStr = ctx[0]?.label
+              const idx     = ctx[0]?.dataIndex
+              const dateStr = currentDates[idx]
               if (!dateStr) return ''
               const d = new Date(dateStr + 'T12:00:00+09:00')
               const days = ['日','月','火','水','木','金','土']
@@ -249,7 +251,8 @@ function buildNutritionConfig(labels, nutrientMap) {
           padding: 10,
           callbacks: {
             title: ctx => {
-              const dateStr = ctx[0]?.label
+              const idx     = ctx[0]?.dataIndex
+              const dateStr = currentDates[idx]
               if (!dateStr) return ''
               const d = new Date(dateStr + 'T12:00:00+09:00')
               const days = ['日','月','火','水','木','金','土']
@@ -345,6 +348,7 @@ async function renderCharts(endDate) {
   try {
     const { bodyData, balanceData, nutrientData } = await fetchData(endDate, currentPeriod)
     const { labels, dates } = buildLabels(endDate, currentPeriod)
+    currentDates = dates
 
     // ── 体組成グラフ用データ ──
     const bodyMap    = new Map(bodyData.map(d => [d.target_date, d]))
