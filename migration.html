@@ -778,7 +778,7 @@ async function startCsvImport() {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/meals`, {
         method: 'POST',
-        headers: { ...H, 'Prefer': 'return=minimal' },
+        headers: { ...H, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
         body: JSON.stringify(chunk),
       });
       if (res.ok) {
