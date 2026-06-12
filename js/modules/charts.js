@@ -1,4 +1,4 @@
-import { getBodyTrend, getCalorieBalanceTrend } from '../api.js'
+import { getBodyTrend, getCalorieBalanceTrend, getNutrientTrend } from '../api.js'
 
 // =============================================
 // 定数
@@ -20,10 +20,11 @@ const METRIC_LABEL = {
 // =============================================
 // 状態
 // =============================================
-let chartInstance = null
-let currentMetric = 'weight'
-let currentPeriod = 30
-let currentEndDate = null
+let chartInstance     = null
+let nutritionInstance = null
+let currentMetric     = 'weight'
+let currentPeriod     = 30
+let currentEndDate    = null
 
 // =============================================
 // 日付ユーティリティ
@@ -40,21 +41,39 @@ function formatDateShort(dateStr) {
 }
 
 // =============================================
-// データ取得（体組成 + 収支を並行取得）
+// データ取得（体組成 + 収支 + 栄養素 を並行取得）
 // =============================================
 async function fetchData(endDate, periodDays) {
   const startDate = subtractDays(endDate, periodDays - 1)
-  const [bodyData, balanceData] = await Promise.all([
+  const [bodyData, balanceData, nutrientData] = await Promise.all([
     getBodyTrend(startDate, endDate),
     getCalorieBalanceTrend(startDate, endDate),
+    getNutrientTrend(startDate, endDate),
   ])
-  return { bodyData, balanceData }
+  return { bodyData, balanceData, nutrientData }
 }
 
 // =============================================
-// Chart.js 設定
+// ラベル配列を生成（両グラフ共通）
 // =============================================
-function buildChartConfig(labels, metricValues, balanceValues) {
+function buildLabels(endDate, periodDays) {
+  const labels = []
+  const dates  = []
+  let cur = subtractDays(endDate, periodDays - 1)
+  while (cur <= endDate) {
+    labels.push(formatDateShort(cur))
+    dates.push(cur)
+    const d = new Date(cur + 'T12:00:00+09:00')
+    d.setDate(d.getDate() + 1)
+    cur = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+  }
+  return { labels, dates }
+}
+
+// =============================================
+// 体組成グラフ設定
+// =============================================
+function buildTrendConfig(labels, metricValues, balanceValues) {
   const color = COLORS[currentMetric]
 
   const barBgColors = balanceValues.map(v => {
@@ -67,7 +86,6 @@ function buildChartConfig(labels, metricValues, balanceValues) {
     data: {
       labels,
       datasets: [
-        // 収支棒グラフ（背景）
         {
           type: 'bar',
           label: '収支 (kcal)',
@@ -77,7 +95,6 @@ function buildChartConfig(labels, metricValues, balanceValues) {
           yAxisID: 'yRight',
           order: 2,
         },
-        // 体組成折れ線（前景）
         {
           type: 'line',
           label: METRIC_LABEL[currentMetric],
@@ -173,68 +190,205 @@ function buildChartConfig(labels, metricValues, balanceValues) {
 }
 
 // =============================================
+// 栄養グラフ設定（PFC stacked bar、Y軸 = kcal）
+// =============================================
+function buildNutritionConfig(labels, nutrientMap) {
+  const proteinKcal = labels.map((_, i) => {
+    const row = nutrientMap.get(i)
+    return row ? Number(row.protein_kcal) : null
+  })
+  const fatKcal = labels.map((_, i) => {
+    const row = nutrientMap.get(i)
+    return row ? Number(row.fat_kcal) : null
+  })
+  const carbsKcal = labels.map((_, i) => {
+    const row = nutrientMap.get(i)
+    return row ? Number(row.carbs_kcal) : null
+  })
+
+  return {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'たんぱく質',
+          data: proteinKcal,
+          backgroundColor: 'rgba(96,165,250,0.75)',
+          borderWidth: 0,
+          stack: 'pfc',
+        },
+        {
+          label: '脂質',
+          data: fatKcal,
+          backgroundColor: 'rgba(251,191,36,0.75)',
+          borderWidth: 0,
+          stack: 'pfc',
+        },
+        {
+          label: '炭水化物',
+          data: carbsKcal,
+          backgroundColor: 'rgba(251,146,60,0.75)',
+          borderWidth: 0,
+          stack: 'pfc',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d27',
+          borderColor: '#2a2d3a',
+          borderWidth: 1,
+          titleColor: '#64748b',
+          bodyColor: '#e2e8f0',
+          padding: 10,
+          callbacks: {
+            title: ctx => {
+              const dateStr = ctx[0]?.label
+              if (!dateStr) return ''
+              const d = new Date(dateStr + 'T12:00:00+09:00')
+              const days = ['日','月','火','水','木','金','土']
+              return `${d.getMonth()+1}月${d.getDate()}日(${days[d.getDay()]})`
+            },
+            label: ctx => {
+              if (ctx.parsed.y == null || ctx.parsed.y === 0) return null
+              const labels = ['P','F','C']
+              const idx = ctx.datasetIndex
+              const g = ctx.raw
+              // grams for display
+              const row = nutrientMap.get(ctx.dataIndex)
+              let gVal = null
+              if (row) {
+                if (idx === 0) gVal = row.protein_g
+                else if (idx === 1) gVal = row.fat_g
+                else gVal = row.carbs_g
+              }
+              const gStr = gVal != null ? ` (${gVal}g)` : ''
+              return ` ${labels[idx]}: ${g} kcal${gStr}`
+            },
+            labelColor: ctx => {
+              const colors = ['#60a5fa','#fbbf24','#fb923c']
+              return { borderColor: 'transparent', backgroundColor: colors[ctx.datasetIndex] }
+            },
+            afterBody: ctx => {
+              const idx = ctx[0]?.dataIndex
+              const row = nutrientMap.get(idx)
+              if (!row) return []
+              const total = (Number(row.protein_kcal) || 0) +
+                            (Number(row.fat_kcal) || 0) +
+                            (Number(row.carbs_kcal) || 0)
+              return [`─────────────`, ` 合計: ${total} kcal`]
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#64748b',
+            font: { family: "'DM Mono', monospace", size: 10 },
+            maxTicksLimit: 8,
+            maxRotation: 0,
+          },
+          grid: { color: '#1e2130' },
+          border: { color: '#2a2d3a' },
+          stacked: true,
+        },
+        y: {
+          stacked: true,
+          ticks: {
+            color: '#64748b',
+            font: { family: "'DM Mono', monospace", size: 10 },
+            callback: v => v + ' kcal',
+          },
+          grid: { color: '#1e2130' },
+          border: { color: '#2a2d3a' },
+        }
+      }
+    }
+  }
+}
+
+// =============================================
 // グラフ描画
 // =============================================
-async function renderChart(endDate) {
-  console.log('[charts] renderChart called, Chart=', typeof Chart, 'endDate=', endDate)
-  const canvas = document.getElementById('trend-chart')
-  if (!canvas) { console.log('[charts] canvas not found'); return }
+async function renderCharts(endDate) {
+  console.log('[charts] renderCharts called, endDate=', endDate)
 
-  const wrapper = canvas.parentElement
-  let loader = wrapper.querySelector('.chart-loader')
-  if (!loader) {
-    loader = document.createElement('div')
-    loader.className = 'chart-loader loading'
-    loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center'
-    wrapper.appendChild(loader)
+  const trendCanvas     = document.getElementById('trend-chart')
+  const nutritionCanvas = document.getElementById('nutrition-chart')
+  if (!trendCanvas) { console.log('[charts] trend-chart not found'); return }
+
+  // ローダー表示
+  function showLoader(canvas) {
+    const wrapper = canvas.parentElement
+    let loader = wrapper.querySelector('.chart-loader')
+    if (!loader) {
+      loader = document.createElement('div')
+      loader.className = 'chart-loader loading'
+      loader.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center'
+      wrapper.appendChild(loader)
+    }
+    loader.textContent = '読み込み中...'
+    loader.style.display = 'flex'
+    return loader
   }
-  loader.textContent = '読み込み中...'
-  loader.style.display = 'flex'
+
+  const trendLoader     = showLoader(trendCanvas)
+  const nutritionLoader = nutritionCanvas ? showLoader(nutritionCanvas) : null
 
   try {
-    const { bodyData, balanceData } = await fetchData(endDate, currentPeriod)
+    const { bodyData, balanceData, nutrientData } = await fetchData(endDate, currentPeriod)
+    const { labels, dates } = buildLabels(endDate, currentPeriod)
 
+    // ── 体組成グラフ用データ ──
     const bodyMap    = new Map(bodyData.map(d => [d.target_date, d]))
     const balanceMap = new Map(balanceData.map(d => [d.target_date, d]))
-    const labels        = []
     const metricValues  = []
     const balanceValues = []
-    const start = subtractDays(endDate, currentPeriod - 1)
-
-    let cur = start
-    while (cur <= endDate) {
-      labels.push(formatDateShort(cur))
-
+    dates.forEach(cur => {
       const bodyRow = bodyMap.get(cur)
       metricValues.push(
         bodyRow?.[currentMetric] != null ? Number(bodyRow[currentMetric]) : null
       )
-
       const balRow = balanceMap.get(cur)
       balanceValues.push(
         balRow?.balance != null ? Math.round(Number(balRow.balance)) : null
       )
+    })
 
-      const d = new Date(cur + 'T12:00:00+09:00')
-      d.setDate(d.getDate() + 1)
-      cur = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null }
+    chartInstance = new Chart(trendCanvas, buildTrendConfig(labels, metricValues, balanceValues))
+
+    // ── 栄養グラフ用データ ──
+    if (nutritionCanvas) {
+      // nutrientMap: index → row
+      const nutDateMap = new Map(nutrientData.map(d => [d.target_date, d]))
+      const nutrientMap = new Map()
+      dates.forEach((cur, i) => {
+        const row = nutDateMap.get(cur)
+        if (row) nutrientMap.set(i, row)
+      })
+
+      if (nutritionInstance) { nutritionInstance.destroy(); nutritionInstance = null }
+      nutritionInstance = new Chart(nutritionCanvas, buildNutritionConfig(labels, nutrientMap))
     }
-
-    if (chartInstance) {
-      chartInstance.destroy()
-      chartInstance = null
-    }
-
-    chartInstance = new Chart(canvas, buildChartConfig(labels, metricValues, balanceValues))
 
   } catch (err) {
     console.error('Chart error:', err)
     if (chartInstance) { chartInstance.destroy(); chartInstance = null }
-    canvas.parentElement.innerHTML =
-      `<div class="error-msg" style="margin:16px;color:#f87171">グラフ取得エラー: ${err.message}</div>`
+    if (nutritionInstance) { nutritionInstance.destroy(); nutritionInstance = null }
+    trendCanvas.parentElement.innerHTML =
+      `<div style="margin:16px;color:#f87171">グラフ取得エラー: ${err.message}</div>`
     return
   } finally {
-    loader.style.display = 'none'
+    trendLoader.style.display = 'none'
+    if (nutritionLoader) nutritionLoader.style.display = 'none'
   }
 }
 
@@ -248,7 +402,7 @@ function initTabs() {
     document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'))
     btn.classList.add('active')
     currentMetric = btn.dataset.metric
-    if (currentEndDate) renderChart(currentEndDate)
+    if (currentEndDate) renderCharts(currentEndDate)
   })
 
   document.getElementById('period-tabs')?.addEventListener('click', e => {
@@ -257,7 +411,7 @@ function initTabs() {
     document.querySelectorAll('.chart-period-tab').forEach(b => b.classList.remove('active'))
     btn.classList.add('active')
     currentPeriod = Number(btn.dataset.days)
-    if (currentEndDate) renderChart(currentEndDate)
+    if (currentEndDate) renderCharts(currentEndDate)
   })
 }
 
@@ -266,7 +420,7 @@ function initTabs() {
 // =============================================
 window.refreshCharts = async (dateStr) => {
   currentEndDate = dateStr
-  await renderChart(dateStr)
+  await renderCharts(dateStr)
 }
 
 document.addEventListener('DOMContentLoaded', initTabs)

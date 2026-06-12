@@ -53,6 +53,20 @@ export async function getCalorieBalanceTrend(startDate, endDate) {
 }
 
 /**
+ * 栄養素推移取得（摂取kcal・PFC）
+ * @param {string} startDate - YYYY-MM-DD
+ * @param {string} endDate   - YYYY-MM-DD
+ */
+export async function getNutrientTrend(startDate, endDate) {
+  const { data, error } = await supabase.rpc('get_nutrient_trend', {
+    p_start_date: startDate,
+    p_end_date: endDate
+  })
+  if (error) throw error
+  return data ?? []
+}
+
+/**
  * 食事履歴サジェスト
  * @param {string} query
  * @param {number} limit
