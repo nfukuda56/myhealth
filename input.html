@@ -502,6 +502,31 @@
       color: var(--danger);
       margin-top: 3px;
     }
+
+    /* 既存記録 */
+    .existing-section { margin-bottom: 0.75rem; }
+    .existing-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .existing-label { font-size: 0.72rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.06em; }
+    .existing-toggle { font-size: 0.75rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; }
+    .existing-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 0.45rem 0.75rem;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      margin-bottom: 4px; gap: 8px;
+    }
+    .existing-name { font-size: 0.88rem; color: var(--text); flex: 1; min-width: 0; }
+    .existing-content { font-size: 0.75rem; color: var(--text-sub); }
+    .existing-kcal { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; }
+    /* 内容フィールド */
+    .item-content-input {
+      width: 100%; border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.4rem 0.7rem; font-size: 0.9rem; background: var(--surface);
+      color: var(--text); outline: none; margin-bottom: 0.5rem;
+    }
+    .item-content-input:focus { border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -559,6 +584,18 @@
     <div class="card">
       <div class="card-label">食事日時</div>
       <input class="form-input" id="meal-datetime" type="datetime-local" style="margin-bottom:0">
+    </div>
+
+
+    <!-- 既存記録 -->
+    <div class="existing-section" id="existing-section" style="display:none">
+      <div class="card" style="padding:0.75rem 1rem">
+        <div class="existing-header">
+          <span class="existing-label" id="existing-label">この食事の記録</span>
+          <button class="existing-toggle" id="existing-toggle">▼ 非表示</button>
+        </div>
+        <div id="existing-list"></div>
+      </div>
     </div>
 
     <!-- 品目リスト -->
@@ -693,10 +730,12 @@ function updateDateDisplay() {
 document.getElementById('prev-day').addEventListener('click', () => {
   currentDate.setDate(currentDate.getDate() - 1)
   updateDateDisplay()
+  loadExistingMeals()
 })
 document.getElementById('next-day').addEventListener('click', () => {
   currentDate.setDate(currentDate.getDate() + 1)
   updateDateDisplay()
+  loadExistingMeals()
 })
 
 // ── タブ切り替え ───────────────────────────────
@@ -769,6 +808,7 @@ document.getElementById('meal-type-row').addEventListener('click', e => {
   document.querySelectorAll('.meal-type-btn').forEach(b => b.classList.remove('active'))
   btn.classList.add('active')
   selectedMealType = btn.dataset.type
+  loadExistingMeals()
 })
 
 // ── タグ ──────────────────────────────────────
@@ -861,26 +901,47 @@ function createItemCard() {
 
 async function fetchSuggest(query, cardId, card, dropdown) {
   try {
-    const { data, error } = await supabase.rpc('suggest_meal_items', { p_query: query, p_limit: 6 })
+    const { data, error } = await supabase
+      .from('meals')
+      .select('menu_name, content, calories_kcal, protein_g, fat_g, carbs_g, measured_at')
+      .ilike('menu_name', `%${query}%`)
+      .order('measured_at', { ascending: false })
+      .limit(50)
     if (error || !data || data.length === 0) { dropdown.style.display = 'none'; return }
-    dropdown.innerHTML = data.map(item => `
-      <div class="suggest-item" data-name="${escHtml(item.menu_name)}"
-           data-kcal="${item.avg_kcal ?? ''}"
-           data-p="${item.avg_protein ?? ''}"
-           data-f="${item.avg_fat ?? ''}"
-           data-c="${item.avg_carbs ?? ''}">
-        <span class="suggest-name">${escHtml(item.menu_name)}</span>
+    // (menu_name, content) ペアで集約
+    const seen = new Map()
+    for (const row of data) {
+      const key = (row.menu_name || '') + '|||' + (row.content || '')
+      if (!seen.has(key)) {
+        seen.set(key, { ...row, use_count: 1 })
+      } else {
+        seen.get(key).use_count++
+      }
+    }
+    const items = [...seen.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 6)
+    dropdown.innerHTML = items.map(item => `
+      <div class="suggest-item"
+           data-name="${escHtml(item.menu_name || '')}"
+           data-content="${escHtml(item.content || '')}"
+           data-kcal="${item.calories_kcal ?? ''}"
+           data-p="${item.protein_g ?? ''}"
+           data-f="${item.fat_g ?? ''}"
+           data-c="${item.carbs_g ?? ''}">
+        <span class="suggest-name">
+          ${escHtml(item.menu_name || '')}
+          ${item.content ? '<span style="color:var(--text-hint);font-size:0.8em"> / ' + escHtml(item.content) + '</span>' : ''}
+        </span>
         <span class="suggest-meta">
           <span class="suggest-badge">${item.use_count}回</span>
-          ${item.avg_kcal ? Math.round(item.avg_kcal) + ' kcal' : ''}
+          ${item.calories_kcal ? Math.round(item.calories_kcal) + ' kcal' : ''}
         </span>
       </div>
     `).join('')
     dropdown.querySelectorAll('.suggest-item').forEach(si => {
       si.addEventListener('mousedown', e => {
         e.preventDefault()
-        const nameInput = card.querySelector('.item-name-input')
-        nameInput.value = si.dataset.name
+        card.querySelector('.item-name-input').value = si.dataset.name
+        card.querySelector('.item-content-input').value = si.dataset.content
         const fill = (field, val) => {
           if (!val) return
           const inp = card.querySelector(`.pfc-input[data-field="${field}"]`)
@@ -910,6 +971,7 @@ function initMealForm() {
   itemCardCount = 0
   list.appendChild(createItemCard())
   updateSummary()
+  loadExistingMeals()
 }
 
 document.getElementById('add-item-btn').addEventListener('click', () => {
@@ -934,6 +996,59 @@ function updateSummary() {
   document.getElementById('sum-c').textContent = c.toFixed(1) + 'g'
 }
 
+// ── 既存食事データ表示 ────────────────────────
+
+let existingVisible = true
+
+async function loadExistingMeals() {
+  const section = document.getElementById('existing-section')
+  const listEl = document.getElementById('existing-list')
+  const labelEl = document.getElementById('existing-label')
+
+  // 日付範囲計算（AM4:00 JST 境界）
+  const dateStr = currentDate.toLocaleDateString('sv-SE') // YYYY-MM-DD
+  const start = new Date(dateStr + 'T04:00:00+09:00').toISOString()
+  const nextDate = new Date(currentDate)
+  nextDate.setDate(nextDate.getDate() + 1)
+  const nextStr = nextDate.toLocaleDateString('sv-SE')
+  const end = new Date(nextStr + 'T04:00:00+09:00').toISOString()
+
+  const { data } = await supabase
+    .from('meals')
+    .select('id, menu_name, content, calories_kcal, meal_type')
+    .gte('measured_at', start)
+    .lt('measured_at', end)
+    .eq('meal_type', selectedMealType)
+    .order('id', { ascending: true })
+
+  if (!data || data.length === 0) {
+    section.style.display = 'none'
+    return
+  }
+
+  const typeLabel = { breakfast:'朝食', lunch:'昼食', dinner:'夕食', snack:'間食' }
+  const totalKcal = data.reduce((s, r) => s + (r.calories_kcal ? Number(r.calories_kcal) : 0), 0)
+  labelEl.textContent = `${typeLabel[selectedMealType] || '食事'}の記録（${data.length}品目・計${Math.round(totalKcal)}kcal）`
+
+  listEl.innerHTML = data.map(r => `
+    <div class="existing-row">
+      <span class="existing-name">${escHtml(r.menu_name || '—')}</span>
+      ${r.content ? `<span class="existing-content">${escHtml(r.content)}</span>` : ''}
+      <span class="existing-kcal">${r.calories_kcal ? Math.round(r.calories_kcal) + ' kcal' : '—'}</span>
+    </div>
+  `).join('')
+
+  section.style.display = 'block'
+}
+
+document.getElementById('existing-toggle').addEventListener('click', () => {
+  const listEl = document.getElementById('existing-list')
+  const btn = document.getElementById('existing-toggle')
+  existingVisible = !existingVisible
+  listEl.style.display = existingVisible ? 'block' : 'none'
+  btn.textContent = existingVisible ? '▼ 非表示' : '▶ 表示'
+})
+
 // ── 食事保存 ──────────────────────────────────
 
 document.getElementById('meal-save-btn').addEventListener('click', async () => {
@@ -951,7 +1066,7 @@ document.getElementById('meal-save-btn').addEventListener('click', async () => {
       protein_g: n('p'),
       fat_g: n('f'),
       carbs_g: n('c'),
-      content: card.querySelector('.item-memo-input').value.trim() || null,
+      content: card.querySelector('.item-content-input').value.trim() || null,
     })
   })
 
@@ -991,6 +1106,7 @@ document.getElementById('meal-save-btn').addEventListener('click', async () => {
   }
 
   showToast('✓ ' + items.length + '品目を保存しました')
+  loadExistingMeals()
 
   // フォームリセット
   document.getElementById('meal-datetime').value = toLocalDatetimeValue()
