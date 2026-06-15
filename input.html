@@ -644,6 +644,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL = 'https://lvmgfolwipwgyhhzskvj.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_q1QSXYVIMPtuf5D7pYmcnw_oijyIXYx'
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+let currentUserId = null
 
 // ── ユーティリティ ──────────────────────────────
 
@@ -715,6 +716,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 async function initAuth() {
   const { data: { session } } = await supabase.auth.getSession()
   if (session) {
+    currentUserId = session.user.id
     showMain()
   } else {
     document.getElementById('auth-screen').style.display = 'flex'
@@ -737,12 +739,13 @@ document.getElementById('signin-btn').addEventListener('click', async () => {
   errEl.textContent = ''
   btn.disabled = true
   btn.innerHTML = '<div class="spinner"></div>'
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password })
   btn.disabled = false
   btn.textContent = 'サインイン'
   if (error) {
     errEl.textContent = 'メールアドレスまたはパスワードが正しくありません'
   } else {
+    currentUserId = signInData.session.user.id
     showMain()
   }
 })
@@ -970,6 +973,7 @@ document.getElementById('meal-save-btn').addEventListener('click', async () => {
 
   const rows = items.map(item => ({
     ...item,
+    user_id: currentUserId,
     meal_type: selectedMealType,
     measured_at: measuredAt,
     memo: memoWithTags,
@@ -1075,6 +1079,7 @@ document.getElementById('bmr-save-btn').addEventListener('click', async () => {
   btn.innerHTML = '<div class="spinner"></div> 保存中...'
 
   const { error } = await supabase.from('body_metrics').insert({
+    user_id: currentUserId,
     measured_at: localToUTC(dtVal),
     basal_metabolism_kcal: val,
     device_name: device,
