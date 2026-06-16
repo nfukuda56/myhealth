@@ -878,14 +878,14 @@ function createItemCard() {
   })
   // blur時は dropdown自身がpointerdownを受け取れるよう少し遅延
   nameInput.addEventListener('blur', () => {
-    closeTimer = setTimeout(() => { dropdown.style.display = 'none' }, 300)
+    closeTimer = setTimeout(() => { dropdown.style.display = 'none' }, 500)
   })
   nameInput.addEventListener('focus', () => {
     if (closeTimer) clearTimeout(closeTimer)
   })
-  // dropdown上でのpointer操作中はblurタイマーをキャンセル
-  dropdown.addEventListener('pointerdown', e => {
-    if (closeTimer) clearTimeout(closeTimer)
+  // mousedown で e.preventDefault() → input の blur を防止（PC）
+  dropdown.addEventListener('mousedown', e => {
+    e.preventDefault()
   })
 
   // PFC変更 → サマリー更新
@@ -953,7 +953,7 @@ async function fetchSuggest(query, cardId, card, dropdown) {
       </div>
     `).join('')
     dropdown.querySelectorAll('.suggest-item').forEach(si => {
-      si.addEventListener('pointerdown', e => {
+      si.addEventListener('click', e => {
         e.preventDefault()
         card.querySelector('.item-name-input').value = si.dataset.name
         card.querySelector('.item-content-input').value = si.dataset.content
@@ -1248,9 +1248,10 @@ deviceInput.addEventListener('input', async () => {
     deviceDropdown.innerHTML = data.slice(0, 5).map(d =>
       `<div class="device-suggest-item">${escHtml(d.device_name ?? d)}</div>`
     ).join('')
+    // mousedown で blur を防止してから click で選択
+    deviceDropdown.addEventListener('mousedown', e => e.preventDefault())
     deviceDropdown.querySelectorAll('.device-suggest-item').forEach(item => {
-      item.addEventListener('pointerdown', e => {
-        e.preventDefault()
+      item.addEventListener('click', e => {
         deviceInput.value = item.textContent.trim()
         deviceDropdown.style.display = 'none'
       })
@@ -1259,7 +1260,7 @@ deviceInput.addEventListener('input', async () => {
   }, 180)
 })
 deviceInput.addEventListener('blur', () => {
-  deviceCloseTimer = setTimeout(() => { deviceDropdown.style.display = 'none' }, 200)
+  deviceCloseTimer = setTimeout(() => { deviceDropdown.style.display = 'none' }, 500)
 })
 deviceInput.addEventListener('focus', () => {
   if (deviceCloseTimer) clearTimeout(deviceCloseTimer)
