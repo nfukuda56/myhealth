@@ -952,20 +952,22 @@ async function fetchSuggest(query, cardId, card, dropdown) {
         </span>
       </div>
     `).join('')
-    dropdown.querySelectorAll('.suggest-item').forEach(si => {
+    dropdown.querySelectorAll('.suggest-item').forEach((si, idx) => {
+      const item = items[idx]
       si.addEventListener('click', e => {
-        e.preventDefault()
-        card.querySelector('.item-name-input').value = si.dataset.name
-        card.querySelector('.item-content-input').value = si.dataset.content
-        const fill = (field, val) => {
-          if (!val) return
+        card.querySelector('.item-name-input').value = item.menu_name || ''
+        card.querySelector('.item-content-input').value = item.content || ''
+        const setNum = (field, val) => {
+          if (val == null) return
+          const n = parseFloat(val)
+          if (isNaN(n)) return
           const inp = card.querySelector(`.pfc-input[data-field="${field}"]`)
-          if (inp) inp.value = parseFloat(val).toFixed(1)
+          if (inp) inp.value = n.toFixed(1)
         }
-        fill('kcal', si.dataset.kcal)
-        fill('p', si.dataset.p)
-        fill('f', si.dataset.f)
-        fill('c', si.dataset.c)
+        setNum('kcal', item.calories_kcal)
+        setNum('p',    item.protein_g)
+        setNum('f',    item.fat_g)
+        setNum('c',    item.carbs_g)
         dropdown.style.display = 'none'
         updateSummary()
       })
