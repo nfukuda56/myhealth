@@ -914,13 +914,23 @@ async function fetchSuggest(query, cardId, card, dropdown) {
       .limit(50)
     if (error || !data || data.length === 0) { dropdown.style.display = 'none'; return }
     // (menu_name, content) ペアで集約
+    // measured_at DESC順なので先頭が最新。kcal/PFCはnullなら古い値にフォールバック
     const seen = new Map()
     for (const row of data) {
       const key = (row.menu_name || '') + '|||' + (row.content || '')
       if (!seen.has(key)) {
-        seen.set(key, { ...row, use_count: 1 })
+        seen.set(key, {
+          menu_name: row.menu_name, content: row.content,
+          calories_kcal: row.calories_kcal, protein_g: row.protein_g,
+          fat_g: row.fat_g, carbs_g: row.carbs_g, use_count: 1
+        })
       } else {
-        seen.get(key).use_count++
+        const e = seen.get(key)
+        e.use_count++
+        if (e.calories_kcal == null) e.calories_kcal = row.calories_kcal
+        if (e.protein_g   == null) e.protein_g   = row.protein_g
+        if (e.fat_g       == null) e.fat_g       = row.fat_g
+        if (e.carbs_g     == null) e.carbs_g     = row.carbs_g
       }
     }
     const items = [...seen.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 6)
