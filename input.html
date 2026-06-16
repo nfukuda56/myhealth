@@ -876,10 +876,15 @@ function createItemCard() {
     if (suggestTimer) clearTimeout(suggestTimer)
     suggestTimer = setTimeout(() => fetchSuggest(q, id, card, dropdown), 180)
   })
+  // blur時は dropdown自身がpointerdownを受け取れるよう少し遅延
   nameInput.addEventListener('blur', () => {
-    closeTimer = setTimeout(() => { dropdown.style.display = 'none' }, 200)
+    closeTimer = setTimeout(() => { dropdown.style.display = 'none' }, 300)
   })
   nameInput.addEventListener('focus', () => {
+    if (closeTimer) clearTimeout(closeTimer)
+  })
+  // dropdown上でのpointer操作中はblurタイマーをキャンセル
+  dropdown.addEventListener('pointerdown', e => {
     if (closeTimer) clearTimeout(closeTimer)
   })
 
@@ -938,7 +943,7 @@ async function fetchSuggest(query, cardId, card, dropdown) {
       </div>
     `).join('')
     dropdown.querySelectorAll('.suggest-item').forEach(si => {
-      si.addEventListener('mousedown', e => {
+      si.addEventListener('pointerdown', e => {
         e.preventDefault()
         card.querySelector('.item-name-input').value = si.dataset.name
         card.querySelector('.item-content-input').value = si.dataset.content
@@ -1234,7 +1239,7 @@ deviceInput.addEventListener('input', async () => {
       `<div class="device-suggest-item">${escHtml(d.device_name ?? d)}</div>`
     ).join('')
     deviceDropdown.querySelectorAll('.device-suggest-item').forEach(item => {
-      item.addEventListener('mousedown', e => {
+      item.addEventListener('pointerdown', e => {
         e.preventDefault()
         deviceInput.value = item.textContent.trim()
         deviceDropdown.style.display = 'none'
