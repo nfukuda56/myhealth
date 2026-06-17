@@ -462,4 +462,29 @@ canvas {
   background: transparent;
   color: var(--text-muted);
   border: 1px solid var(--border);
-  border-radiu
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  transition: all 0.15s;
+}
+
+.signout-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* =============================================
+   Responsive (スマホ縦積み)
+   ============================================= */
+@media (max-width: 768px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+  .col-left {
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-right {
+    max-height: none;
+  }
+}
