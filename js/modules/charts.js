@@ -26,6 +26,7 @@ let currentMetric     = 'weight'
 let currentPeriod     = 30
 let currentEndDate    = null
 let currentDates      = []   // 完全日付文字列 (YYYY-MM-DD) の配列
+let currentUseFirst   = false // 最初の測定値を使うか
 
 // =============================================
 // 日付ユーティリティ
@@ -47,7 +48,7 @@ function formatDateShort(dateStr) {
 async function fetchData(endDate, periodDays) {
   const startDate = subtractDays(endDate, periodDays - 1)
   const [bodyData, balanceData, nutrientData] = await Promise.all([
-    getBodyTrend(startDate, endDate),
+    getBodyTrend(startDate, endDate, currentUseFirst),
     getCalorieBalanceTrend(startDate, endDate),
     getNutrientTrend(startDate, endDate),
   ])
@@ -404,6 +405,15 @@ async function renderCharts(endDate) {
 // タブ切替
 // =============================================
 function initTabs() {
+  document.getElementById('order-tabs')?.addEventListener('click', e => {
+    const btn = e.target.closest('.chart-order-tab')
+    if (!btn) return
+    document.querySelectorAll('.chart-order-tab').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    currentUseFirst = btn.dataset.first === 'true'
+    if (currentEndDate) renderCharts(currentEndDate)
+  })
+
   document.getElementById('chart-tabs')?.addEventListener('click', e => {
     const btn = e.target.closest('.chart-tab')
     if (!btn) return
