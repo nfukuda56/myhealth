@@ -101,20 +101,16 @@
       <div class="card-header"><span class="card-title">Daily Summary</span></div>
       <div id="summary-content"><div class="loading">読み込み中...</div></div>
     </div>
-    <div class="card">
+    <div class="card card-timeline">
       <div class="card-header"><span class="card-title">Timeline</span></div>
       <div id="timeline-content"><div class="loading">読み込み中...</div></div>
     </div>
   </div>
   <div class="col-right">
-    <div class="card">
+    <div class="card" style="flex:4 1 0">
       <div class="card-header">
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <span class="card-title">Trend</span>
-          <div class="chart-order-tabs" id="order-tabs">
-            <button class="chart-order-tab active" data-first="false">最終</button>
-            <button class="chart-order-tab" data-first="true">最初</button>
-          </div>
           <div class="chart-tabs" id="chart-tabs">
             <button class="chart-tab active" data-metric="weight">体重</button>
             <button class="chart-tab" data-metric="body_fat_pct">体脂肪率</button>
@@ -129,31 +125,24 @@
           <button class="chart-period-tab" data-days="180">180日</button>
         </div>
       </div>
-      <div style="position:relative;height:300px"><canvas id="trend-chart"></canvas></div>
+      <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
     </div>
-    <div class="card">
-      <div class="card-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="card" style="flex:2.5 1 0">
+      <div class="card-header">
         <span class="card-title">Nutrition</span>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#60a5fa"></span><span style="font-size:11px;color:var(--text-muted)">P</span>
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#fbbf24"></span><span style="font-size:11px;color:var(--text-muted)">F</span>
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#fb923c"></span><span style="font-size:11px;color:var(--text-muted)">C</span>
+        <div style="display:flex;gap:12px;align-items:center;margin-top:2px">
+          <span class="legend-dot" style="background:#60a5fa"></span><span class="legend-label">P</span>
+          <span class="legend-dot" style="background:#fbbf24"></span><span class="legend-label">F</span>
+          <span class="legend-dot" style="background:#fb923c"></span><span class="legend-label">C</span>
         </div>
       </div>
-      <div style="position:relative;height:200px"><canvas id="nutrition-chart"></canvas></div>
+      <div class="chart-wrap"><canvas id="nutrition-chart"></canvas></div>
     </div>
-    <div class="card">
+    <div class="card" style="flex:3 1 0;width:66.67%">
       <div class="card-header">
         <span class="card-title">72h Timeline</span>
-        <div style="display:flex;gap:12px;align-items:center;margin-top:2px">
-          <span class="legend-dot" style="background:#4ade80"></span><span class="legend-label">収支−</span>
-          <span class="legend-dot" style="background:#f87171"></span><span class="legend-label">収支+</span>
-          <span class="legend-dot" style="background:#e2e8f0"></span><span class="legend-label">累積収支</span>
-        </div>
       </div>
-      <div style="width:66.67%;position:relative;height:240px">
-        <canvas id="timeline72-chart"></canvas>
-      </div>
+      <div class="chart-wrap"><canvas id="timeline72-chart"></canvas></div>
     </div>
   </div>
 </main>
@@ -166,9 +155,8 @@
   .log-err  { color: var(--danger); }
   .log-info { color: var(--text-muted); }
   .log-warn { color: var(--warn); }
-  .chart-order-tabs { display:flex;gap:4px; }
-  .chart-order-tab  { padding:2px 8px;font-family:var(--mono);font-size:0.7rem;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all .15s; }
-  .chart-order-tab.active { background:var(--surface2);color:var(--text);border-color:var(--accent); }
+  .legend-dot   { display:inline-block;width:8px;height:8px;border-radius:2px; }
+  .legend-label { font-size:11px;color:var(--text-muted);margin-left:2px; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
@@ -199,14 +187,4 @@
       setTimeout(function () { msg.textContent = ''; }, 2000);
     });
   });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeQR(); });
-})();
-</script>
-
-<script type="module" src="js/modules/timeline72.js?v=2"></script>
-<script type="module" src="js/modules/charts.js?v=10"></script>
-<script type="module" src="js/modules/import.js?v=4"></script>
-<script type="module" src="js/app.js"></script>
-
-</body>
-</html>
+  document.addEventListener('keydown', function

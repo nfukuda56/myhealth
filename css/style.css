@@ -104,8 +104,8 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
-  max-height: calc(100vh - 52px);
+  overflow: hidden;
+  height: calc(100vh - 52px);
 }
 
 .col-right {
@@ -113,8 +113,36 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow: hidden;
+  height: calc(100vh - 52px);
+}
+
+/* 右カラムのカードは縦flexで伸縮 */
+.col-right .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* チャートcanvasラッパー：カード内の余白を埋める */
+.chart-wrap {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+}
+
+/* 左カラム Timeline カード：余白を埋めて内部スクロール */
+.card-timeline {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#timeline-content {
   overflow-y: auto;
-  max-height: calc(100vh - 52px);
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 /* =============================================
@@ -434,29 +462,4 @@ canvas {
   background: transparent;
   color: var(--text-muted);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--mono);
-  transition: all 0.15s;
-}
-
-.signout-btn:hover {
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
-/* =============================================
-   Responsive (スマホ縦積み)
-   ============================================= */
-@media (max-width: 768px) {
-  .app-main {
-    grid-template-columns: 1fr;
-  }
-  .col-left {
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  .col-right {
-    max-height: none;
-  }
-}
+  border-radiu
