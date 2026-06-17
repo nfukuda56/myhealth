@@ -165,7 +165,7 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 
 <script>
 (function () {
@@ -175,9 +175,13 @@
     document.getElementById('qr-modal-overlay').classList.add('show');
     document.getElementById('qr-url-label').textContent = INPUT_URL;
     if (!qrGenerated) {
-      QRCode.toCanvas(document.getElementById('qr-canvas'), INPUT_URL,
-        { width: 220, margin: 0, color: { dark: '#000000', light: '#ffffff' } },
-        function (err) { if (err) console.error('QR生成エラー:', err); });
+      new QRious({
+        element: document.getElementById('qr-canvas'),
+        value: INPUT_URL,
+        size: 220,
+        foreground: '#000000',
+        background: '#ffffff'
+      });
       qrGenerated = true;
     }
   }
