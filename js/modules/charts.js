@@ -198,6 +198,33 @@ function buildTrendConfig(labels, metricValues, balanceValues) {
 // =============================================
 // 栄養グラフ設定
 // =============================================
+
+// 総摂取カロリーをPFCバーの中央に1/4幅で重ねて描画するプラグイン
+const intakeOverlayPlugin = {
+  id: 'intakeOverlay',
+  afterDatasetsDraw(chart) {
+    const intakeData = chart.config.options._intakeData
+    if (!intakeData) return
+    const { ctx, scales } = chart
+    const yAxis = scales.y
+    const firstMeta = chart.getDatasetMeta(0)
+    if (!firstMeta?.data?.length) return
+
+    ctx.save()
+    firstMeta.data.forEach((bar, i) => {
+      const val = intakeData[i]
+      if (val == null || val === 0) return
+      const w        = bar.width * 0.25
+      const x        = bar.x - w / 2
+      const y        = yAxis.getPixelForValue(val)
+      const yBottom  = yAxis.getPixelForValue(0)
+      ctx.fillStyle  = 'rgba(255,255,255,0.55)'
+      ctx.fillRect(x, y, w, yBottom - y)
+    })
+    ctx.restore()
+  }
+}
+
 function buildNutritionConfig(labels, nutrientMap) {
   const isKcal = currentNutritionMode === 'kcal'
 
@@ -213,46 +240,37 @@ function buildNutritionConfig(labels, nutrientMap) {
     const row = nutrientMap.get(i); if (!row) return null
     return isKcal ? Number(row.carbs_kcal) : Number(row.carbs_g)
   })
-  const intakeData = labels.map((_, i) => {
-    const row = nutrientMap.get(i)
-    return row ? Number(row.intake_kcal) : null
-  })
+  const intakeData = isKcal
+    ? labels.map((_, i) => { const row = nutrientMap.get(i); return row ? Number(row.intake_kcal) : null })
+    : null
 
   const yLabel = isKcal ? (v => v + ' kcal') : (v => v + ' g')
 
-  const datasets = [
-    {
-      label: 'P', data: proteinData,
-      backgroundColor: 'rgba(96,165,250,0.75)', borderWidth: 0,
-      stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8, order: 2,
-    },
-    {
-      label: 'F', data: fatData,
-      backgroundColor: 'rgba(251,191,36,0.75)', borderWidth: 0,
-      stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8, order: 2,
-    },
-    {
-      label: 'C', data: carbsData,
-      backgroundColor: 'rgba(251,146,60,0.75)', borderWidth: 0,
-      stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8, order: 2,
-    },
-  ]
-
-  if (isKcal) {
-    datasets.push({
-      label: '摂取カロリー', data: intakeData,
-      backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 0,
-      stack: 'intake',
-      barPercentage: 0.85 * 0.25,
-      categoryPercentage: 0.8,
-      order: 1,
-    })
-  }
-
   return {
     type: 'bar',
-    data: { labels, datasets },
+    plugins: isKcal ? [intakeOverlayPlugin] : [],
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'P', data: proteinData,
+          backgroundColor: 'rgba(96,165,250,0.75)', borderWidth: 0,
+          stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8,
+        },
+        {
+          label: 'F', data: fatData,
+          backgroundColor: 'rgba(251,191,36,0.75)', borderWidth: 0,
+          stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8,
+        },
+        {
+          label: 'C', data: carbsData,
+          backgroundColor: 'rgba(251,146,60,0.75)', borderWidth: 0,
+          stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8,
+        },
+      ]
+    },
     options: {
+      _intakeData: intakeData,
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
@@ -261,7 +279,6 @@ function buildNutritionConfig(labels, nutrientMap) {
         tooltip: {
           backgroundColor: '#1a1d27', borderColor: '#2a2d3a', borderWidth: 1,
           titleColor: '#64748b', bodyColor: '#e2e8f0', padding: 10,
-          filter: item => item.dataset.label !== '摂取カロリー',
           callbacks: {
             title: ctx => {
               const idx     = ctx[0]?.dataIndex
