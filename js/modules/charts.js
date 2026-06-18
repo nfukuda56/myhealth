@@ -26,7 +26,8 @@ let currentMetric     = 'weight'
 let currentPeriod     = 30
 let currentEndDate    = null
 let currentDates      = []   // 完全日付文字列 (YYYY-MM-DD) の配列
-let currentUseFirst   = false // 最初の測定値を使うか
+let currentUseFirst      = false  // 最初の測定値を使うか
+let currentNutritionMode = 'kcal'  // 'kcal' | 'g'
 
 // =============================================
 // 日付ユーティリティ
@@ -195,50 +196,62 @@ function buildTrendConfig(labels, metricValues, balanceValues) {
 }
 
 // =============================================
-// 栄養グラフ設定（PFC stacked bar、Y軸 = kcal）
+// 栄養グラフ設定
 // =============================================
 function buildNutritionConfig(labels, nutrientMap) {
-  const proteinKcal = labels.map((_, i) => {
-    const row = nutrientMap.get(i)
-    return row ? Number(row.protein_kcal) : null
+  const isKcal = currentNutritionMode === 'kcal'
+
+  const proteinData = labels.map((_, i) => {
+    const row = nutrientMap.get(i); if (!row) return null
+    return isKcal ? Number(row.protein_kcal) : Number(row.protein_g)
   })
-  const fatKcal = labels.map((_, i) => {
-    const row = nutrientMap.get(i)
-    return row ? Number(row.fat_kcal) : null
+  const fatData = labels.map((_, i) => {
+    const row = nutrientMap.get(i); if (!row) return null
+    return isKcal ? Number(row.fat_kcal) : Number(row.fat_g)
   })
-  const carbsKcal = labels.map((_, i) => {
-    const row = nutrientMap.get(i)
-    return row ? Number(row.carbs_kcal) : null
+  const carbsData = labels.map((_, i) => {
+    const row = nutrientMap.get(i); if (!row) return null
+    return isKcal ? Number(row.carbs_kcal) : Number(row.carbs_g)
   })
+  const intakeData = labels.map((_, i) => {
+    const row = nutrientMap.get(i)
+    return row ? Number(row.intake_kcal) : null
+  })
+
+  const yLabel = isKcal ? (v => v + ' kcal') : (v => v + ' g')
+
+  const datasets = [
+    {
+      label: 'P', data: proteinData,
+      backgroundColor: 'rgba(96,165,250,0.75)', borderWidth: 0,
+      stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8, order: 2,
+    },
+    {
+      label: 'F', data: fatData,
+      backgroundColor: 'rgba(251,191,36,0.75)', borderWidth: 0,
+      stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8, order: 2,
+    },
+    {
+      label: 'C', data: carbsData,
+      backgroundColor: 'rgba(251,146,60,0.75)', borderWidth: 0,
+      stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8, order: 2,
+    },
+  ]
+
+  if (isKcal) {
+    datasets.push({
+      label: '摂取カロリー', data: intakeData,
+      backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 0,
+      stack: 'intake',
+      barPercentage: 0.85 * 0.25,
+      categoryPercentage: 0.8,
+      order: 1,
+    })
+  }
 
   return {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'たんぱく質',
-          data: proteinKcal,
-          backgroundColor: 'rgba(96,165,250,0.75)',
-          borderWidth: 0,
-          stack: 'pfc',
-        },
-        {
-          label: '脂質',
-          data: fatKcal,
-          backgroundColor: 'rgba(251,191,36,0.75)',
-          borderWidth: 0,
-          stack: 'pfc',
-        },
-        {
-          label: '炭水化物',
-          data: carbsKcal,
-          backgroundColor: 'rgba(251,146,60,0.75)',
-          borderWidth: 0,
-          stack: 'pfc',
-        },
-      ]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -246,12 +259,9 @@ function buildNutritionConfig(labels, nutrientMap) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#1a1d27',
-          borderColor: '#2a2d3a',
-          borderWidth: 1,
-          titleColor: '#64748b',
-          bodyColor: '#e2e8f0',
-          padding: 10,
+          backgroundColor: '#1a1d27', borderColor: '#2a2d3a', borderWidth: 1,
+          titleColor: '#64748b', bodyColor: '#e2e8f0', padding: 10,
+          filter: item => item.dataset.label !== '摂取カロリー',
           callbacks: {
             title: ctx => {
               const idx     = ctx[0]?.dataIndex
@@ -263,19 +273,21 @@ function buildNutritionConfig(labels, nutrientMap) {
             },
             label: ctx => {
               if (ctx.parsed.y == null || ctx.parsed.y === 0) return null
-              const labels = ['P','F','C']
-              const idx = ctx.datasetIndex
-              const g = ctx.raw
-              // grams for display
+              const macroLabels = ['P','F','C']
+              const i = ctx.datasetIndex
+              const v = ctx.parsed.y
               const row = nutrientMap.get(ctx.dataIndex)
-              let gVal = null
-              if (row) {
-                if (idx === 0) gVal = row.protein_g
-                else if (idx === 1) gVal = row.fat_g
-                else gVal = row.carbs_g
+              if (isKcal) {
+                let gVal = null
+                if (row) {
+                  if (i === 0) gVal = row.protein_g
+                  else if (i === 1) gVal = row.fat_g
+                  else gVal = row.carbs_g
+                }
+                const gStr = gVal != null ? ` (${gVal}g)` : ''
+                return ` ${macroLabels[i]}: ${v} kcal${gStr}`
               }
-              const gStr = gVal != null ? ` (${gVal}g)` : ''
-              return ` ${labels[idx]}: ${g} kcal${gStr}`
+              return ` ${macroLabels[i]}: ${v} g`
             },
             labelColor: ctx => {
               const colors = ['#60a5fa','#fbbf24','#fb923c']
@@ -285,42 +297,34 @@ function buildNutritionConfig(labels, nutrientMap) {
               const idx = ctx[0]?.dataIndex
               const row = nutrientMap.get(idx)
               if (!row) return []
-              const total = (Number(row.protein_kcal) || 0) +
-                            (Number(row.fat_kcal) || 0) +
-                            (Number(row.carbs_kcal) || 0)
-              return [`─────────────`, ` 合計: ${total} kcal`]
-            }
+              if (isKcal) {
+                const pfcTotal = (Number(row.protein_kcal)||0)+(Number(row.fat_kcal)||0)+(Number(row.carbs_kcal)||0)
+                const intake   = Number(row.intake_kcal)||0
+                return ['─────────────', ` PFC換算: ${pfcTotal} kcal`, ` 摂取合計: ${intake} kcal`]
+              }
+              const total = (Number(row.protein_g)||0)+(Number(row.fat_g)||0)+(Number(row.carbs_g)||0)
+              return ['─────────────', ` 合計: ${total.toFixed(1)} g`]
+            },
           }
         }
       },
       layout: { padding: { right: 52 } },
       scales: {
         x: {
-          ticks: {
-            color: '#64748b',
-            font: { family: "'DM Mono', monospace", size: 10 },
-            maxTicksLimit: 8,
-            maxRotation: 0,
-          },
-          grid: { color: '#1e2130' },
-          border: { color: '#2a2d3a' },
-          stacked: true,
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 10 }, maxTicksLimit: 8, maxRotation: 0 },
+          grid: { color: '#1e2130' }, border: { color: '#2a2d3a' }, stacked: true,
         },
         y: {
           stacked: true,
           afterFit(scale) { scale.width = 58 },
-          ticks: {
-            color: '#64748b',
-            font: { family: "'DM Mono', monospace", size: 10 },
-            callback: v => v + ' kcal',
-          },
-          grid: { color: '#1e2130' },
-          border: { color: '#2a2d3a' },
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 10 }, callback: yLabel },
+          grid: { color: '#1e2130' }, border: { color: '#2a2d3a' },
         }
       }
     }
   }
 }
+
 
 // =============================================
 // グラフ描画
@@ -405,6 +409,17 @@ async function renderCharts(endDate) {
 // タブ切替
 // =============================================
 function initTabs() {
+  document.getElementById('nutrition-mode-tabs')?.addEventListener('click', e => {
+    const btn = e.target.closest('.chart-order-tab')
+    if (!btn) return
+    document.querySelectorAll('#nutrition-mode-tabs .chart-order-tab').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    currentNutritionMode = btn.dataset.mode
+    const legend = document.getElementById('nutrition-intake-legend')
+    if (legend) legend.style.display = currentNutritionMode === 'kcal' ? 'flex' : 'none'
+    if (currentEndDate) renderCharts(currentEndDate)
+  })
+
   document.getElementById('order-tabs')?.addEventListener('click', e => {
     const btn = e.target.closest('.chart-order-tab')
     if (!btn) return
