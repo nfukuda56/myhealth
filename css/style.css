@@ -143,6 +143,11 @@ input:focus, select:focus, textarea:focus {
   overflow-y: auto;
   flex: 1 1 0;
   min-height: 0;
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE/Edge */
+}
+#timeline-content::-webkit-scrollbar {
+  display: none;               /* Chrome/Safari */
 }
 
 /* =============================================
