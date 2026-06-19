@@ -13,8 +13,13 @@ let chartInstance = null
 // =============================================
 // ウィンドウ計算
 // =============================================
+/**
+ * target_date の終端（翌日 AM4:00 JST）を windowEnd とし
+ * そこから 72h 遡った windowStart を返す
+ */
 function getWindow(targetDate) {
   const hh = String(DAY_BOUNDARY_HOUR).padStart(2, '0')
+  // target_date + 1 day
   const d = new Date(targetDate + 'T12:00:00+09:00')
   d.setDate(d.getDate() + 1)
   const nextDate = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -27,11 +32,15 @@ function getWindow(targetDate) {
 // スロット生成
 // =============================================
 function buildSlots(windowStart) {
-  return Array.from({ length: NUM_SLOTS }, (_, i) => ({
-    slotStart: new Date(windowStart.getTime() + i * SLOT_HOURS * 3600 * 1000)
-  }))
+  return Array.from({ length: NUM_SLOTS }, (_, i) => {
+    const slotStart = new Date(windowStart.getTime() + i * SLOT_HOURS * 3600 * 1000)
+    return { slotStart }
+  })
 }
 
+/**
+ * スロットラベル。日付境界（DAY_BOUNDARY_HOUR or 0h）は "M/D HH:00"、他は "HH:00"
+ */
 function slotLabel(slotStart) {
   const jst = new Date(slotStart.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
   const h   = jst.getHours()
@@ -74,120 +83,117 @@ async function fetchData(windowStart, windowEnd) {
 }
 
 // =============================================
-// 系列構築（収支のみ）
+// 系列構築
 // =============================================
 function buildSeries(slots, meals, exercises, basalPerDay) {
-  const originMs   = slots[0].slotStart.getTime()
-  const slotMs     = SLOT_HOURS * 3600 * 1000
-  const basalPerSlot = basalPerDay / (24 / SLOT_HOURS)
+  const originMs = slots[0].slotStart.getTime()
+  const slotMs   = SLOT_HOURS * 3600 * 1000
 
-  // スロットごとの摂取・運動消費を集計
-  const intakeArr  = new Array(NUM_SLOTS).fill(0)
-  const workoutArr = new Array(NUM_SLOTS).fill(0)
+  const intakeBars  = new Array(NUM_SLOTS).fill(0)
+  const workoutBars = new Array(NUM_SLOTS).fill(0)
 
   for (const m of meals) {
     if (!m.calories_kcal) continue
     const idx = Math.floor((new Date(m.measured_at).getTime() - originMs) / slotMs)
-    if (idx >= 0 && idx < NUM_SLOTS) intakeArr[idx] += Number(m.calories_kcal)
+    if (idx >= 0 && idx < NUM_SLOTS) intakeBars[idx] += Number(m.calories_kcal)
   }
   for (const e of exercises) {
     if (!e.burned_kcal) continue
     const idx = Math.floor((new Date(e.measured_at).getTime() - originMs) / slotMs)
-    if (idx >= 0 && idx < NUM_SLOTS) workoutArr[idx] += Number(e.burned_kcal)
+    if (idx >= 0 && idx < NUM_SLOTS) workoutBars[idx] += Number(e.burned_kcal)
   }
 
-  // 収支（摂取 − 基礎代謝 − 運動消費）
-  let cumBalance = 0
-  const balanceBars = []   // 2h 単位収支
-  const balanceLine = []   // 累積収支
+  const basalPerSlot = basalPerDay / (24 / SLOT_HOURS)
+  let cumIntake = 0, cumEx = 0
+  const intakeLine = [], consumptionLine = [], basalLine = []
 
   for (let i = 0; i < NUM_SLOTS; i++) {
-    const slotBalance = intakeArr[i] - basalPerSlot - workoutArr[i]
-    cumBalance += slotBalance
-    balanceBars.push(Math.round(slotBalance))
-    balanceLine.push(Math.round(cumBalance))
+    cumIntake += intakeBars[i]
+    cumEx     += workoutBars[i]
+    const cumBasal = basalPerSlot * (i + 1)
+    intakeLine.push(Math.round(cumIntake))
+    consumptionLine.push(Math.round(cumBasal + cumEx))
+    basalLine.push(Math.round(cumBasal))
   }
 
-  return { balanceBars, balanceLine }
+  return {
+    intakeBars:  intakeBars.map(v  => v  > 0 ? Math.round(v)  : null),
+    workoutBars: workoutBars.map(v => v  > 0 ? Math.round(v)  : null),
+    intakeLine, consumptionLine, basalLine, basalPerDay
+  }
 }
 
 // =============================================
 // Chart.js 設定
 // =============================================
 function buildConfig(labels, series) {
-  const { balanceBars, balanceLine } = series
-
-  // 棒グラフの色：プラス（過剰）=赤、マイナス（不足）=緑
-  const barColors = balanceBars.map(v =>
-    v >= 0 ? 'rgba(248,113,113,0.45)' : 'rgba(74,222,128,0.45)'
-  )
-  const barBorderColors = balanceBars.map(v =>
-    v >= 0 ? 'rgba(248,113,113,0.80)' : 'rgba(74,222,128,0.80)'
-  )
+  const { intakeBars, workoutBars, intakeLine, consumptionLine, basalLine, basalPerDay } = series
 
   return {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        // ── 2h 単位収支 棒グラフ（背景）──
+        // ── 棒グラフ（右軸・2h 単位）──
         {
-          type: 'bar',
-          label: '収支 (2h)',
-          data: balanceBars,
-          backgroundColor: barColors,
-          borderColor:     barBorderColors,
+          type: 'bar', label: '摂取 (2h)',
+          data: intakeBars,
+          backgroundColor: 'rgba(74,222,128,0.22)',
+          borderColor:     'rgba(74,222,128,0.50)',
           borderWidth: 1,
-          yAxisID: 'y',
-          order: 2,
-          barPercentage: 0.55,
-          categoryPercentage: 0.65,
+          yAxisID: 'yR', order: 4,
+          barPercentage: 0.40, categoryPercentage: 0.55,
         },
-        // ── 累積収支 折れ線（前景）──
         {
-          type: 'line',
-          label: '累積収支',
-          data: balanceLine,
-          borderColor: '#e2e8f0',
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.3,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          borderWidth: 2.5,
-          yAxisID: 'y',
-          order: 1,
+          type: 'bar', label: '運動消費 (2h)',
+          data: workoutBars,
+          backgroundColor: 'rgba(251,146,60,0.22)',
+          borderColor:     'rgba(251,146,60,0.50)',
+          borderWidth: 1,
+          yAxisID: 'yR', order: 4,
+          barPercentage: 0.40, categoryPercentage: 0.55,
+        },
+        // ── 折れ線（左軸・累積）──
+        {
+          type: 'line', label: '摂取累積',
+          data: intakeLine,
+          borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.07)',
+          fill: true, tension: 0.35,
+          pointRadius: 0, pointHoverRadius: 4,
+          borderWidth: 2, yAxisID: 'y', order: 1,
+        },
+        {
+          type: 'line', label: '推定総消費累積',
+          data: consumptionLine,
+          borderColor: '#f87171', backgroundColor: 'transparent',
+          fill: false, tension: 0.35,
+          pointRadius: 0, pointHoverRadius: 4,
+          borderWidth: 2, yAxisID: 'y', order: 1,
+        },
+        {
+          type: 'line', label: '基礎代謝（累積）',
+          data: basalLine,
+          borderColor: '#a78bfa', backgroundColor: 'transparent',
+          fill: false, tension: 0,
+          pointRadius: 0, pointHoverRadius: 3,
+          borderWidth: 1.5, borderDash: [5, 4],
+          yAxisID: 'y', order: 2,
+          hidden: basalPerDay === 0,
         },
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            color: '#64748b',
-            font: { family: "'DM Mono', monospace", size: 10 },
-            boxWidth: 10,
-            padding: 10,
-          }
-        },
+        legend: { display: false },
         tooltip: {
-          backgroundColor: '#1a1d27',
-          borderColor: '#2a2d3a',
-          borderWidth: 1,
-          titleColor: '#94a3b8',
-          bodyColor: '#e2e8f0',
-          padding: 10,
+          backgroundColor: '#1a1d27', borderColor: '#2a2d3a', borderWidth: 1,
+          titleColor: '#94a3b8', bodyColor: '#e2e8f0', padding: 10,
           callbacks: {
             label: ctx => {
-              const v = ctx.parsed.y
-              if (v == null) return null
-              const sign = v > 0 ? '+' : ''
-              return ` ${ctx.dataset.label}: ${sign}${Math.round(v)} kcal`
+              if (ctx.parsed.y == null) return null
+              return ` ${ctx.dataset.label}: ${Math.round(ctx.parsed.y)} kcal`
             }
           }
         }
@@ -197,9 +203,9 @@ function buildConfig(labels, series) {
           ticks: {
             color: '#64748b',
             font: { family: "'DM Mono', monospace", size: 9 },
-            maxRotation: 45,
-            minRotation: 0,
+            maxRotation: 45, minRotation: 0,
             autoSkip: false,
+            // 6時間ごと（3スロットごと）にラベル表示
             callback: (_, idx) => idx % 3 === 0 ? labels[idx] : ''
           },
           grid: {
@@ -209,20 +215,24 @@ function buildConfig(labels, series) {
         },
         y: {
           position: 'left',
-          title: {
-            display: true,
-            text: '収支 kcal',
-            color: '#475569',
-            font: { size: 10, family: "'DM Mono', monospace" }
-          },
+          title: { display: true, text: '累積 kcal', color: '#475569', font: { size: 9, family: "'DM Mono', monospace" } },
           ticks: {
             color: '#64748b',
             font: { family: "'DM Mono', monospace", size: 10 },
-            callback: v => (v > 0 ? '+' : '') + v.toLocaleString()
+            callback: v => v.toLocaleString()
           },
-          grid: {
-            color: ctx => ctx.tick.value === 0 ? '#4a5280' : '#1e2130'
+          grid: { color: '#1e2130' },
+          border: { color: '#2a2d3a' }
+        },
+        yR: {
+          position: 'right',
+          title: { display: true, text: '2h kcal', color: '#475569', font: { size: 9, family: "'DM Mono', monospace" } },
+          ticks: {
+            color: '#94a3b8',
+            font: { family: "'DM Mono', monospace", size: 9 },
+            callback: v => v.toLocaleString()
           },
+          grid: { drawOnChartArea: false },
           border: { color: '#2a2d3a' }
         }
       }
