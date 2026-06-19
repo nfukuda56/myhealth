@@ -166,7 +166,7 @@ function buildConfig(labels, series) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          display: true,
+          display: false,
           position: 'top',
           labels: {
             color: '#64748b',
