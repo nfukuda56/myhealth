@@ -32,8 +32,8 @@ export async function getDailyTimeline(targetDate) {
 export async function getBodyTrend(startDate, endDate, useFirst = false) {
   const { data, error } = await supabase.rpc('get_body_trend', {
     p_start_date: startDate,
-    p_end_date: endDate,
-    p_use_first: useFirst,
+    p_end_date:   endDate,
+    p_use_first:  useFirst,
   })
   if (error) throw error
   return data ?? []
