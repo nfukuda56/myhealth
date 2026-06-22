@@ -139,11 +139,12 @@ function binMetric(dates, metricByDate, periodDays) {
   const size = BIN_SIZE[periodDays]
   if (!size) return null
   const binLabels = [], binValues = []
-  for (let i = 0; i < dates.length; i += size) {
-    const slice = dates.slice(i, i + size)
+  // 選択日（末尾）を起点に逆算してビン分割
+  for (let i = dates.length; i > 0; i -= size) {
+    const slice = dates.slice(Math.max(0, i - size), i)
     const vals = slice.map(d => metricByDate.get(d)).filter(v => v != null)
-    binLabels.push(formatDateShort(slice[slice.length - 1]))
-    binValues.push(vals.length ? Math.round(vals.reduce((a,b) => a+b, 0) / vals.length * 10) / 10 : null)
+    binLabels.unshift(formatDateShort(slice[slice.length - 1]))
+    binValues.unshift(vals.length ? Math.round(vals.reduce((a,b) => a+b, 0) / vals.length * 10) / 10 : null)
   }
   return { binLabels, binValues }
 }
@@ -153,17 +154,18 @@ function binNutrient(dates, nutDateMap, periodDays) {
   if (!size) return null
   const keys = ['protein_g','fat_g','carbs_g','protein_kcal','fat_kcal','carbs_kcal']
   const binLabels = [], binRows = []
-  for (let i = 0; i < dates.length; i += size) {
-    const slice = dates.slice(i, i + size)
-    binLabels.push(formatDateShort(slice[slice.length - 1]))
+  // 選択日（末尾）を起点に逆算してビン分割
+  for (let i = dates.length; i > 0; i -= size) {
+    const slice = dates.slice(Math.max(0, i - size), i)
+    binLabels.unshift(formatDateShort(slice[slice.length - 1]))
     const rows = slice.map(d => nutDateMap.get(d)).filter(Boolean)
-    if (!rows.length) { binRows.push(null); continue }
+    if (!rows.length) { binRows.unshift(null); continue }
     const avgRow = {}
     for (const k of keys) {
       const vals = rows.map(r => Number(r[k])).filter(v => !isNaN(v) && v > 0)
       avgRow[k] = vals.length ? Math.round(vals.reduce((a,b) => a+b, 0) / vals.length) : 0
     }
-    binRows.push(avgRow)
+    binRows.unshift(avgRow)
   }
   return { binLabels, binRows }
 }
