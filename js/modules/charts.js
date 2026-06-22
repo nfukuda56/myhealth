@@ -430,20 +430,23 @@ function renderPacePanel(stats, balanceData, allDates) {
   const fmtb = v => v!=null ? (v>0?`+${v}`:`${v}`)+' kcal' : '—'
   const bColor = avgBalance!=null ? (avgBalance<0?'#4ade80':'#f87171') : 'var(--text-muted)'
   el.innerHTML = `
-    <div style="display:flex;height:100%;min-height:0">
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;gap:3px">
-        ${_gaugeSVG(pace, color)}
-        <div style="font-family:var(--mono);font-size:12px;font-weight:600;color:${color}">${label}</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);text-align:center">
-          週 <span style="color:var(--text)">${fmt(pace)} kg</span><br>
-          月 <span style="color:var(--text)">${fmt(month)} kg</span>
-        </div>
-        ${est!=null?`<div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">30日後 <span style="color:var(--text)">${est} kg</span></div>`:''}
+    <div style="display:flex;height:100%;min-height:0;align-items:stretch">
+      <!-- 左: 平均摂取・運動消費・平均収支 -->
+      <div style="width:34%;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:8px 6px 8px 8px;font-family:var(--mono);font-size:10px;color:var(--text-muted)">
+        <div>平均摂取<br><span style="color:var(--text);font-size:11px">${fmtk(avgIntake)}</span></div>
+        <div>運動消費<br><span style="color:var(--text);font-size:11px">${fmtk(avgBurned)}</span></div>
+        <div>平均収支<br><span style="color:${bColor};font-size:11px">${fmtb(avgBalance)}</span></div>
       </div>
-      <div style="width:44%;border-left:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:10px;padding:10px;font-family:var(--mono);font-size:10px;color:var(--text-muted)">
-        <div>平均摂取<br><span style="color:var(--text);font-size:12px">${fmtk(avgIntake)}</span></div>
-        <div>運動消費<br><span style="color:var(--text);font-size:12px">${fmtk(avgBurned)}</span></div>
-        <div>平均収支<br><span style="color:${bColor};font-size:12px">${fmtb(avgBalance)}</span></div>
+      <!-- 中央: ゲージ＋ラベル -->
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);border-right:1px solid var(--border);padding:4px 2px;gap:2px">
+        ${_gaugeSVG(pace, color)}
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:${color}">${label}</div>
+      </div>
+      <!-- 右: 週・月・30日後 -->
+      <div style="width:30%;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:8px 8px 8px 6px;font-family:var(--mono);font-size:10px;color:var(--text-muted)">
+        <div>週<br><span style="color:var(--text);font-size:11px">${fmt(pace)} kg</span></div>
+        <div>月<br><span style="color:var(--text);font-size:11px">${fmt(month)} kg</span></div>
+        <div>30日後<br><span style="color:var(--text);font-size:11px">${est!=null?est+' kg':'—'}</span></div>
       </div>
     </div>
   `
