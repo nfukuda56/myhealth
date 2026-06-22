@@ -121,6 +121,7 @@
             <button class="chart-tab" data-metric="fat_mass">体脂肪量</button>
             <button class="chart-tab" data-metric="lean_body_mass">除脂肪体重</button>
           </div>
+          <span id="envelope-infobar" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);display:flex;gap:12px;align-items:center;flex-wrap:wrap"></span>
         </div>
         <div class="chart-period-tabs" id="period-tabs">
           <button class="chart-period-tab" data-days="7">7日</button>
@@ -149,7 +150,7 @@
       </div>
       <div class="chart-wrap"><canvas id="nutrition-chart"></canvas></div>
     </div>
-    <div style="display:flex;gap:12px;width:100%">
+    <div style="display:flex;gap:12px;width:100%;min-height:210px">
       <div class="card" style="flex:2 1 0">
         <div class="card-header">
           <span class="card-title">72h Timeline</span>
@@ -216,7 +217,7 @@
 </script>
 
 <script type="module" src="js/modules/timeline72.js?v=5"></script>
-<script type="module" src="js/modules/charts.js?v=14"></script>
+<script type="module" src="js/modules/charts.js?v=15"></script>
 <script type="module" src="js/modules/import.js?v=4"></script>
 <script type="module" src="js/app.js"></script>
 

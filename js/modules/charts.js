@@ -345,21 +345,12 @@ function buildNutritionConfig(labels, nutrientMap) {
 // =============================================
 // インフォバー
 // =============================================
-function _ensureInfobar(trendCanvas) {
-  const card = trendCanvas.closest('.card')
-  if (!card) return null
-  let bar = card.querySelector('#envelope-infobar')
-  if (!bar) {
-    bar = document.createElement('div')
-    bar.id = 'envelope-infobar'
-    bar.style.cssText = 'padding:7px 14px;font-family:var(--mono);font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;align-items:center;min-height:30px'
-    card.appendChild(bar)
-  }
-  return bar
+function _ensureInfobar() {
+  return document.getElementById('envelope-infobar')
 }
 
 function renderInfobar(canvas, stats, cps) {
-  const bar = _ensureInfobar(canvas)
+  const bar = _ensureInfobar()
   if (!bar) return
   if (!stats || stats.pacePerWeek == null) { bar.innerHTML = ''; return }
   const { label, color } = evaluatePace(stats.pacePerWeek)
@@ -367,10 +358,10 @@ function renderInfobar(canvas, stats, cps) {
   const est  = stats.estimatedWeight30d != null ? `${stats.estimatedWeight30d} kg` : '—'
   const rStr = stats.r != null ? `r = ${stats.r}` : '—'
   bar.innerHTML = `
-    <span>週ペース <strong style="color:${color}">${pace > 0 ? '+' : ''}${pace} kg</strong></span>
-    <span style="color:${color};font-weight:600">${label}</span>
-    <span style="color:var(--text-muted)">30日後推定 <strong style="color:var(--text)">${est}</strong></span>
-    <span style="color:var(--text-muted)">${rStr}${cps.length ? ` ／ 変化点 ${cps.length}件` : ''}</span>
+    <span style="color:var(--text-muted)">週 <strong style="color:${color}">${pace > 0 ? '+' : ''}${pace} kg</strong></span>
+    <span style="color:${color};font-weight:700">${label}</span>
+    <span style="color:var(--text-muted)">30日後 <strong style="color:var(--text)">${est}</strong></span>
+    ${cps.length ? `<span style="color:var(--text-muted)">変化点 ${cps.length}件</span>` : ''}
   `
 }
 
@@ -518,7 +509,7 @@ async function renderCharts(endDate) {
         renderInfobar(trendCanvas, null, [])
       }
     } else {
-      const infobar = trendCanvas.closest('.card')?.querySelector('#envelope-infobar')
+      const infobar = document.getElementById('envelope-infobar')
       if (infobar) infobar.innerHTML = ''
     }
 
