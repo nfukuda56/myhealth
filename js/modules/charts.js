@@ -24,6 +24,7 @@ const METRIC_LABEL = {
 const ENV_COLOR = '#4a9eff'
 const CP_COLOR  = '#e05050'
 const LAG_DAYS  = 3
+const BIN_SIZE  = { 30: 7, 90: 14, 180: 30 }
 
 // =============================================
 // 状態
@@ -42,7 +43,9 @@ let _envelopeVals = []
 let _keyPtIdxSet  = new Set()
 let _changePts    = []
 let _totalDates   = 0
-let _cachedStats  = null
+let _cachedStats         = null
+let trendAvgInstance     = null
+let nutritionAvgInstance = null
 
 // =============================================
 // 包絡線オーバーレイプラグイン
@@ -127,6 +130,42 @@ function buildLabels(endDate, periodDays) {
     cur = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
   }
   return { labels, dates }
+}
+
+// =============================================
+// ビン集計ユーティリティ
+// =============================================
+function binMetric(dates, metricByDate, periodDays) {
+  const size = BIN_SIZE[periodDays]
+  if (!size) return null
+  const binLabels = [], binValues = []
+  for (let i = 0; i < dates.length; i += size) {
+    const slice = dates.slice(i, i + size)
+    const vals = slice.map(d => metricByDate.get(d)).filter(v => v != null)
+    binLabels.push(formatDateShort(slice[slice.length - 1]))
+    binValues.push(vals.length ? Math.round(vals.reduce((a,b) => a+b, 0) / vals.length * 10) / 10 : null)
+  }
+  return { binLabels, binValues }
+}
+
+function binNutrient(dates, nutDateMap, periodDays) {
+  const size = BIN_SIZE[periodDays]
+  if (!size) return null
+  const keys = ['protein_g','fat_g','carbs_g','protein_kcal','fat_kcal','carbs_kcal']
+  const binLabels = [], binRows = []
+  for (let i = 0; i < dates.length; i += size) {
+    const slice = dates.slice(i, i + size)
+    binLabels.push(formatDateShort(slice[slice.length - 1]))
+    const rows = slice.map(d => nutDateMap.get(d)).filter(Boolean)
+    if (!rows.length) { binRows.push(null); continue }
+    const avgRow = {}
+    for (const k of keys) {
+      const vals = rows.map(r => Number(r[k])).filter(v => !isNaN(v) && v > 0)
+      avgRow[k] = vals.length ? Math.round(vals.reduce((a,b) => a+b, 0) / vals.length) : 0
+    }
+    binRows.push(avgRow)
+  }
+  return { binLabels, binRows }
 }
 
 // =============================================
@@ -343,6 +382,104 @@ function buildNutritionConfig(labels, nutrientMap) {
 }
 
 // =============================================
+// 期間平均グラフ設定
+// =============================================
+function buildTrendAvgConfig(binLabels, binValues) {
+  const color = COLORS[currentMetric]
+  return {
+    type: 'line',
+    data: {
+      labels: binLabels,
+      datasets: [{
+        type: 'line', label: METRIC_LABEL[currentMetric],
+        data: binValues,
+        borderColor: color.line, backgroundColor: color.fill,
+        pointBackgroundColor: color.line, pointBorderColor: 'transparent',
+        pointRadius: 4, pointHoverRadius: 6,
+        borderWidth: 2, fill: true, tension: 0.3, spanGaps: true,
+        yAxisID: 'y',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d27', borderColor: '#2a2d3a', borderWidth: 1,
+          titleColor: '#64748b', bodyColor: '#e2e8f0', padding: 8,
+          callbacks: {
+            label: ctx => ctx.parsed.y == null ? null :
+              (currentMetric === 'body_fat_pct' ? ` ${ctx.parsed.y} %` : ` ${ctx.parsed.y} kg`)
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 9 }, maxRotation: 0 },
+          grid: { color: '#1e2130' }, border: { color: '#2a2d3a' }
+        },
+        y: {
+          afterFit(scale) { scale.width = 46 },
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 9 },
+            callback: v => currentMetric === 'body_fat_pct' ? v + '%' : v + 'kg' },
+          grid: { color: '#1e2130' }, border: { color: '#2a2d3a' }
+        }
+      }
+    }
+  }
+}
+
+function buildNutritionAvgConfig(binLabels, binRows) {
+  const isKcal = currentNutritionMode === 'kcal'
+  const p = binRows.map(r => r ? (isKcal ? r.protein_kcal : r.protein_g) : null)
+  const f = binRows.map(r => r ? (isKcal ? r.fat_kcal     : r.fat_g    ) : null)
+  const c = binRows.map(r => r ? (isKcal ? r.carbs_kcal   : r.carbs_g  ) : null)
+  return {
+    type: 'bar',
+    data: {
+      labels: binLabels,
+      datasets: [
+        { label: 'P', data: p, backgroundColor: 'rgba(96,165,250,0.75)',  borderWidth: 0, stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8 },
+        { label: 'F', data: f, backgroundColor: 'rgba(251,191,36,0.75)',  borderWidth: 0, stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8 },
+        { label: 'C', data: c, backgroundColor: 'rgba(251,146,60,0.75)',  borderWidth: 0, stack: 'pfc', barPercentage: 0.85, categoryPercentage: 0.8 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d27', borderColor: '#2a2d3a', borderWidth: 1,
+          titleColor: '#64748b', bodyColor: '#e2e8f0', padding: 8,
+          callbacks: {
+            label: ctx => {
+              if (ctx.parsed.y == null || ctx.parsed.y === 0) return null
+              return ` ${'PFC'[ctx.datasetIndex]}: ${ctx.parsed.y} ${isKcal ? 'kcal' : 'g'}`
+            },
+            labelColor: ctx => ({ borderColor: 'transparent', backgroundColor: ['#60a5fa','#fbbf24','#fb923c'][ctx.datasetIndex] }),
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 9 }, maxRotation: 0 },
+          grid: { color: '#1e2130' }, border: { color: '#2a2d3a' }, stacked: true,
+        },
+        y: {
+          stacked: true,
+          afterFit(scale) { scale.width = 46 },
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 9 },
+            callback: v => isKcal ? v : v + 'g' },
+          grid: { color: '#1e2130' }, border: { color: '#2a2d3a' },
+        }
+      }
+    }
+  }
+}
+
+// =============================================
 // インフォバー
 // =============================================
 function _ensureInfobar() {
@@ -518,12 +655,43 @@ async function renderCharts(endDate) {
     chartInstance = new Chart(trendCanvas, buildTrendConfig(labels, metricValues, balanceValues, showEnvelope))
 
     // ── Nutrition グラフ ──
+    const nutDateMap = new Map(nutrientData.map(d => [d.target_date, d]))
     if (nutritionCanvas) {
-      const nutDateMap  = new Map(nutrientData.map(d => [d.target_date, d]))
       const nutrientMap = new Map()
       dates.forEach((cur, i) => { const row=nutDateMap.get(cur); if(row) nutrientMap.set(i, row) })
       if (nutritionInstance) { nutritionInstance.destroy(); nutritionInstance = null }
       nutritionInstance = new Chart(nutritionCanvas, buildNutritionConfig(labels, nutrientMap))
+    }
+
+    // ── 期間平均グラフ ──
+    const trendAvgWrap     = document.getElementById('trend-avg-wrap')
+    const nutritionAvgWrap = document.getElementById('nutrition-avg-wrap')
+    const showAvg = currentPeriod in BIN_SIZE
+
+    if (trendAvgWrap)     trendAvgWrap.style.display     = showAvg ? '' : 'none'
+    if (nutritionAvgWrap) nutritionAvgWrap.style.display = showAvg ? '' : 'none'
+
+    if (showAvg) {
+      const metricByDate = new Map(dates.map(d => [d, bodyMap.get(d)?.[currentMetric] != null ? Number(bodyMap.get(d)[currentMetric]) : null]))
+      const trendBin = binMetric(dates, metricByDate, currentPeriod)
+      if (trendBin) {
+        const trendAvgCanvas = document.getElementById('trend-avg-chart')
+        if (trendAvgCanvas) {
+          if (trendAvgInstance) { trendAvgInstance.destroy(); trendAvgInstance = null }
+          trendAvgInstance = new Chart(trendAvgCanvas, buildTrendAvgConfig(trendBin.binLabels, trendBin.binValues))
+        }
+      }
+      const nutBin = binNutrient(dates, nutDateMap, currentPeriod)
+      if (nutBin) {
+        const nutritionAvgCanvas = document.getElementById('nutrition-avg-chart')
+        if (nutritionAvgCanvas) {
+          if (nutritionAvgInstance) { nutritionAvgInstance.destroy(); nutritionAvgInstance = null }
+          nutritionAvgInstance = new Chart(nutritionAvgCanvas, buildNutritionAvgConfig(nutBin.binLabels, nutBin.binRows))
+        }
+      }
+    } else {
+      if (trendAvgInstance)     { trendAvgInstance.destroy();     trendAvgInstance     = null }
+      if (nutritionAvgInstance) { nutritionAvgInstance.destroy(); nutritionAvgInstance = null }
     }
 
   } catch (err) {
