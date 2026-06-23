@@ -262,13 +262,13 @@ function buildTrendConfig(labels, metricValues, balanceValues, showEnvelope) {
         y: {
           position: 'left',
           afterFit(scale) { scale.width = 58 },
-          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 10 }, callback: v => currentMetric === 'body_fat_pct' ? v + '%' : v + 'kg' },
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 10 }, callback: v => { const r = Math.round(v * 10) / 10; return currentMetric === 'body_fat_pct' ? r + '%' : r + 'kg' } },
           grid: { color: '#1e2130' }, border: { color: '#2a2d3a' },
         },
         yRight: {
           position: 'right',
           afterFit(scale) { scale.width = 52 },
-          ticks: { color: '#a78bfa', font: { family: "'DM Mono', monospace", size: 10 }, callback: v => (v > 0 ? '+' : '') + v },
+          ticks: { color: '#a78bfa', font: { family: "'DM Mono', monospace", size: 10 }, callback: v => { const r = Math.round(v); return (r > 0 ? '+' : '') + r } },
           grid: { drawOnChartArea: false }, border: { color: '#2a2d3a' },
         }
       }
@@ -377,7 +377,7 @@ function buildNutritionConfig(labels, nutrientMap) {
         y: {
           stacked: true,
           afterFit(scale) { scale.width = 58 },
-          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 10 }, callback: v => isKcal ? v + ' kcal' : v + ' g' },
+          ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 10 }, callback: v => isKcal ? Math.round(v) + ' kcal' : (Math.round(v * 10) / 10) + ' g' },
           grid: { color: '#1e2130' }, border: { color: '#2a2d3a' },
         }
       }
@@ -445,7 +445,7 @@ function buildTrendAvgConfig(binLabels, binValues, binBalance, yMin, yMax, yRMin
           ...(yMax != null ? { max: yMax } : {}),
           afterFit(scale) { scale.width = 46 },
           ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 9 },
-            callback: v => currentMetric === 'body_fat_pct' ? v + '%' : v + 'kg' },
+            callback: v => { const r = Math.round(v * 10) / 10; return currentMetric === 'body_fat_pct' ? r + '%' : r + 'kg' } },
           grid: { color: '#1e2130' }, border: { color: '#2a2d3a' }
         },
         yRight: {
@@ -454,7 +454,7 @@ function buildTrendAvgConfig(binLabels, binValues, binBalance, yMin, yMax, yRMin
           ...(yRMax != null ? { max: yRMax } : {}),
           afterFit(scale) { scale.width = 46 },
           ticks: { color: '#a78bfa', font: { family: "'DM Mono', monospace", size: 9 },
-            callback: v => (v > 0 ? '+' : '') + v },
+            callback: v => { const r = Math.round(v); return (r > 0 ? '+' : '') + r } },
           grid: { drawOnChartArea: false }, border: { color: '#2a2d3a' }
         }
       }
@@ -504,7 +504,7 @@ function buildNutritionAvgConfig(binLabels, binRows) {
           stacked: true,
           afterFit(scale) { scale.width = 46 },
           ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 9 },
-            callback: v => isKcal ? v : v + 'g' },
+            callback: v => isKcal ? Math.round(v) : (Math.round(v * 10) / 10) + 'g' },
           grid: { color: '#1e2130' }, border: { color: '#2a2d3a' },
         }
       }
