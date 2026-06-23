@@ -590,24 +590,43 @@ function renderPacePanel(stats, balanceData, allDates) {
   const fmtk = v => v!=null ? `${v} kcal` : '—'
   const fmtb = v => v!=null ? (v>0?`+${v}`:`${v}`)+' kcal' : '—'
   const bColor = avgBalance!=null ? (avgBalance<0?'#4ade80':'#f87171') : 'var(--text-muted)'
+  const sign = v => v != null ? (v > 0 ? '+' : '') + v : '—'
   el.innerHTML = `
     <div style="display:flex;height:100%;min-height:0;align-items:stretch">
-      <!-- 左: 平均摂取・運動消費・平均収支（1行形式） -->
-      <div style="width:44%;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:8px 4px 8px 8px;font-family:var(--mono);font-size:11px;min-width:0">
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)">平均摂取: <span style="color:var(--text)">${fmtk(avgIntake)}</span></div>
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)">運動消費: <span style="color:var(--text)">${fmtk(avgBurned)}</span></div>
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)">平均収支: <span style="color:${bColor}">${fmtb(avgBalance)}</span></div>
+      <!-- 左: 平均統計（ラベル上・値下） -->
+      <div style="width:42%;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:8px 4px 8px 8px;min-width:0">
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">平均摂取</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden">${avgIntake??'—'}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">${avgIntake!=null?'kcal':''}</span></div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">運動消費</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden">${avgBurned??'—'}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">${avgBurned!=null?'kcal':''}</span></div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">平均収支</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:${bColor};white-space:nowrap;overflow:hidden">${sign(avgBalance)}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">${avgBalance!=null?'kcal':''}</span></div>
+        </div>
       </div>
       <!-- 中央: ゲージ＋ラベル -->
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);border-right:1px solid var(--border);padding:4px 2px;gap:3px">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--border);border-right:1px solid var(--border);padding:4px 2px;gap:4px">
         ${_gaugeSVG(pace, color)}
-        <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:${color}">${label}</div>
+        <div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${color}">${label}</div>
       </div>
-      <!-- 右: 週・月・30日後（1行形式） -->
-      <div style="width:30%;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:8px 8px 8px 6px;font-family:var(--mono);font-size:11px;min-width:0">
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)">週: <span style="color:var(--text)">${fmt(pace)} kg</span></div>
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)">月: <span style="color:var(--text)">${fmt(month)} kg</span></div>
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)">30日後: <span style="color:var(--text)">${est!=null?est+' kg':'—'}</span></div>
+      <!-- 右: 週・月・30日後（ラベル上・値下） -->
+      <div style="width:32%;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:8px 8px 8px 6px;min-width:0">
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">週</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden">${fmt(pace)}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">kg</span></div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">月</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden">${fmt(month)}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">kg</span></div>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">30日後</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden">${est??'—'}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">${est!=null?'kg':''}</span></div>
+        </div>
       </div>
     </div>
   `
