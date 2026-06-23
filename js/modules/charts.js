@@ -557,7 +557,7 @@ function _gaugeSVG(pacePerWeek, color) {
     nx = cx + r*0.75*Math.cos(ang)
     ny = cy - r*0.75*Math.sin(ang)
   }
-  return `<svg viewBox="0 0 160 75" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:160px">
+  return `<svg viewBox="0 0 160 75" xmlns="http://www.w3.org/2000/svg" style="width:100%">
   <path d="${arcD}" fill="none" stroke="#2a2d3a" stroke-width="10"/>
   ${zonePaths}
   <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
@@ -594,7 +594,7 @@ function renderPacePanel(stats, balanceData, allDates) {
   el.innerHTML = `
     <div style="display:flex;height:100%;min-height:0;align-items:stretch">
       <!-- 左: 平均統計（ラベル上・値下） -->
-      <div style="width:42%;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:8px 4px 8px 8px;min-width:0">
+      <div style="width:34%;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:8px 4px 8px 8px;min-width:0">
         <div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">平均摂取</div>
           <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden">${avgIntake??'—'}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">${avgIntake!=null?'kcal':''}</span></div>
@@ -614,7 +614,7 @@ function renderPacePanel(stats, balanceData, allDates) {
         <div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${color}">${label}</div>
       </div>
       <!-- 右: 週・月・30日後（ラベル上・値下） -->
-      <div style="width:32%;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:8px 8px 8px 6px;min-width:0">
+      <div style="width:26%;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:8px 8px 8px 6px;min-width:0">
         <div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">週</div>
           <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden">${fmt(pace)}<span style="font-size:11px;color:var(--text-muted);margin-left:2px">kg</span></div>
