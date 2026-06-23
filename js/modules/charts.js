@@ -494,6 +494,7 @@ function buildNutritionAvgConfig(binLabels, binRows) {
           }
         }
       },
+      layout: { padding: { right: 46 } },
       scales: {
         x: {
           ticks: { color: '#64748b', font: { family: "'DM Mono', monospace", size: 9 }, maxRotation: 0 },
