@@ -695,11 +695,15 @@ async function renderCharts(endDate) {
         renderInfobar(trendCanvas, stats, cps)
         renderPacePanel(stats, balanceData, dates)
       } else {
+        _cachedStats = null
         renderInfobar(trendCanvas, null, [])
+        renderPacePanel(null, null, null)
       }
     } else {
+      _cachedStats = null
       const infobar = document.getElementById('envelope-infobar')
       if (infobar) infobar.innerHTML = ''
+      renderPacePanel(null, null, null)
     }
 
     // ── Trend グラフ ──
@@ -813,9 +817,6 @@ function initTabs() {
 window.refreshCharts = async (dateStr) => {
   currentEndDate = dateStr
   await renderCharts(dateStr)
-  if (_cachedStats) {
-    renderPacePanel(_cachedStats.stats, _cachedStats.balanceData, _cachedStats.allDates)
-  }
 }
 
 document.addEventListener('DOMContentLoaded', initTabs)
