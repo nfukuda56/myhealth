@@ -111,17 +111,12 @@
       <div class="card-header">
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <span class="card-title">Trend</span>
-          <div class="chart-order-tabs" id="order-tabs">
-            <button class="chart-order-tab active" data-first="false">最終</button>
-            <button class="chart-order-tab" data-first="true">最初</button>
-          </div>
           <div class="chart-tabs" id="chart-tabs">
             <button class="chart-tab active" data-metric="weight">体重</button>
             <button class="chart-tab" data-metric="body_fat_pct">体脂肪率</button>
             <button class="chart-tab" data-metric="fat_mass">体脂肪量</button>
             <button class="chart-tab" data-metric="lean_body_mass">除脂肪体重</button>
           </div>
-          <span id="envelope-infobar" style="font-family:var(--mono);font-size:10px;color:var(--text-muted);display:flex;gap:12px;align-items:center;flex-wrap:wrap"></span>
         </div>
         <div class="chart-period-tabs" id="period-tabs">
           <button class="chart-period-tab" data-days="7">7日</button>
@@ -130,33 +125,20 @@
           <button class="chart-period-tab" data-days="180">180日</button>
         </div>
       </div>
-      <div style="display:flex;flex:1 1 0;min-height:0">
-        <div class="chart-wrap" style="flex:3 1 0"><canvas id="trend-chart"></canvas></div>
-        <div class="chart-wrap" id="trend-avg-wrap" style="flex:1 1 0;border-left:1px solid var(--border)"><canvas id="trend-avg-chart"></canvas></div>
-      </div>
+      <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
     </div>
     <div class="card" style="flex:2.5 1 0">
-      <div class="card-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="card-header">
         <span class="card-title">Nutrition</span>
-        <div class="chart-order-tabs" id="nutrition-mode-tabs">
-          <button class="chart-order-tab active" data-mode="kcal">kcal</button>
-          <button class="chart-order-tab" data-mode="g">g</button>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#60a5fa"></span><span style="font-size:11px;color:var(--text-muted)">P</span>
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#fbbf24"></span><span style="font-size:11px;color:var(--text-muted)">F</span>
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#fb923c"></span><span style="font-size:11px;color:var(--text-muted)">C</span>
-          <span id="nutrition-intake-legend" style="display:flex;gap:4px;align-items:center">
-            <span style="display:inline-block;width:4px;height:10px;border-radius:1px;background:rgba(255,255,255,0.55)"></span><span style="font-size:11px;color:var(--text-muted)">摂取</span>
-          </span>
+        <div style="display:flex;gap:12px;align-items:center;margin-top:2px">
+          <span class="legend-dot" style="background:#60a5fa"></span><span class="legend-label">P</span>
+          <span class="legend-dot" style="background:#fbbf24"></span><span class="legend-label">F</span>
+          <span class="legend-dot" style="background:#fb923c"></span><span class="legend-label">C</span>
         </div>
       </div>
-      <div style="display:flex;flex:1 1 0;min-height:0">
-        <div class="chart-wrap" style="flex:3 1 0"><canvas id="nutrition-chart"></canvas></div>
-        <div class="chart-wrap" id="nutrition-avg-wrap" style="flex:1 1 0;border-left:1px solid var(--border)"><canvas id="nutrition-avg-chart"></canvas></div>
-      </div>
+      <div class="chart-wrap"><canvas id="nutrition-chart"></canvas></div>
     </div>
-    <div style="display:flex;gap:12px;width:100%;min-height:210px">
+    <div style="display:flex;gap:12px;width:100%">
       <div class="card" style="flex:2 1 0">
         <div class="card-header">
           <span class="card-title">72h Timeline</span>
@@ -166,7 +148,7 @@
       <div class="card" id="pace-panel" style="flex:1 1 0;min-width:0;display:flex;flex-direction:column">
         <div class="card-header"><span class="card-title">Pace</span></div>
         <div id="pace-content" style="flex:1;overflow:auto">
-          <div style="color:var(--text-muted);font-size:12px;padding:12px;font-family:var(--mono)">読み込み中...</div>
+          <div style="color:var(--text-muted);font-size:12px;padding:12px">読み込み中...</div>
         </div>
       </div>
     </div>
@@ -181,13 +163,12 @@
   .log-err  { color: var(--danger); }
   .log-info { color: var(--text-muted); }
   .log-warn { color: var(--warn); }
-  .chart-order-tabs { display:flex;gap:4px; }
-  .chart-order-tab  { padding:3px 8px;font-family:var(--mono);font-size:11px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all .15s; }
-  .chart-order-tab.active { background:var(--surface2);color:var(--text);border-color:var(--accent); }
+  .legend-dot   { display:inline-block;width:8px;height:8px;border-radius:2px; }
+  .legend-label { font-size:11px;color:var(--text-muted);margin-left:2px; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
 <script>
 (function () {
@@ -197,13 +178,9 @@
     document.getElementById('qr-modal-overlay').classList.add('show');
     document.getElementById('qr-url-label').textContent = INPUT_URL;
     if (!qrGenerated) {
-      new QRious({
-        element: document.getElementById('qr-canvas'),
-        value: INPUT_URL,
-        size: 220,
-        foreground: '#000000',
-        background: '#ffffff'
-      });
+      QRCode.toCanvas(document.getElementById('qr-canvas'), INPUT_URL,
+        { width: 220, margin: 0, color: { dark: '#000000', light: '#ffffff' } },
+        function (err) { if (err) console.error('QR生成エラー:', err); });
       qrGenerated = true;
     }
   }
@@ -222,9 +199,9 @@
 })();
 </script>
 
-<script type="module" src="js/modules/timeline72.js?v=5"></script>
-<script type="module" src="js/modules/charts.js?v=24"></script>
+<script type="module" src="js/modules/charts.js?v=8"></script>
 <script type="module" src="js/modules/import.js?v=4"></script>
+<script type="module" src="js/modules/timeline72.js?v=1"></script>
 <script type="module" src="js/app.js"></script>
 
 </body>
