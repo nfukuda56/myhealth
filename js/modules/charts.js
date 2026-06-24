@@ -921,4 +921,5 @@ window.refreshCharts = async (dateStr) => {
   await renderCharts(dateStr)
 }
 
-document.addEventListene
+document.addEventListener('DOMContentLoaded', initTabs)
+if (document.readyState !== 'loading') initTabs()
