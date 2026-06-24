@@ -880,7 +880,8 @@ function addDragBehavior(canvas) {
     if (deltaDays === 0) return
 
     const today  = todayJST()
-    let newEnd   = addDays(currentEndDate, deltaDays)
+    // 右スワイプ(dx>0) → 過去へ、左スワイプ(dx<0) → 未来へ
+    let newEnd   = addDays(currentEndDate, -deltaDays)
     if (newEnd > today) newEnd = today
     if (newEnd === currentEndDate) return
 
@@ -920,5 +921,4 @@ window.refreshCharts = async (dateStr) => {
   await renderCharts(dateStr)
 }
 
-document.addEventListener('DOMContentLoaded', initTabs)
-if (document.readyState !== 'loading') initTabs()
+document.addEventListene
