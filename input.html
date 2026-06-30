@@ -502,31 +502,6 @@
       color: var(--danger);
       margin-top: 3px;
     }
-
-    /* 既存記録 */
-    .existing-section { margin-bottom: 0.75rem; }
-    .existing-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 0.5rem;
-    }
-    .existing-label { font-size: 0.72rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.06em; }
-    .existing-toggle { font-size: 0.75rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; }
-    .existing-row {
-      display: flex; align-items: baseline; justify-content: space-between;
-      padding: 0.45rem 0.75rem;
-      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-      margin-bottom: 4px; gap: 8px;
-    }
-    .existing-name { font-size: 0.88rem; color: var(--text); flex: 1; min-width: 0; }
-    .existing-content { font-size: 0.75rem; color: var(--text-sub); }
-    .existing-kcal { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; }
-    /* 内容フィールド */
-    .item-content-input {
-      width: 100%; border: 1px solid var(--border); border-radius: 6px;
-      padding: 0.4rem 0.7rem; font-size: 0.9rem; background: var(--surface);
-      color: var(--text); outline: none; margin-bottom: 0.5rem;
-    }
-    .item-content-input:focus { border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -584,18 +559,6 @@
     <div class="card">
       <div class="card-label">食事日時</div>
       <input class="form-input" id="meal-datetime" type="datetime-local" style="margin-bottom:0">
-    </div>
-
-
-    <!-- 既存記録 -->
-    <div class="existing-section" id="existing-section" style="display:none">
-      <div class="card" style="padding:0.75rem 1rem">
-        <div class="existing-header">
-          <span class="existing-label" id="existing-label">この食事の記録</span>
-          <button class="existing-toggle" id="existing-toggle">▼ 非表示</button>
-        </div>
-        <div id="existing-list"></div>
-      </div>
     </div>
 
     <!-- 品目リスト -->
@@ -681,7 +644,6 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL = 'https://lvmgfolwipwgyhhzskvj.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_q1QSXYVIMPtuf5D7pYmcnw_oijyIXYx'
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
-let currentUserId = null
 
 // ── ユーティリティ ──────────────────────────────
 
@@ -717,6 +679,7 @@ function showToast(msg) {
 
 let currentDate = new Date()
 currentDate.setHours(0, 0, 0, 0)
+let currentUserId = null
 
 function updateDateDisplay() {
   document.getElementById('date-display').textContent = formatDate(currentDate)
@@ -730,12 +693,10 @@ function updateDateDisplay() {
 document.getElementById('prev-day').addEventListener('click', () => {
   currentDate.setDate(currentDate.getDate() - 1)
   updateDateDisplay()
-  loadExistingMeals()
 })
 document.getElementById('next-day').addEventListener('click', () => {
   currentDate.setDate(currentDate.getDate() + 1)
   updateDateDisplay()
-  loadExistingMeals()
 })
 
 // ── タブ切り替え ───────────────────────────────
@@ -808,7 +769,6 @@ document.getElementById('meal-type-row').addEventListener('click', e => {
   document.querySelectorAll('.meal-type-btn').forEach(b => b.classList.remove('active'))
   btn.classList.add('active')
   selectedMealType = btn.dataset.type
-  loadExistingMeals()
 })
 
 // ── タグ ──────────────────────────────────────
@@ -861,7 +821,7 @@ function createItemCard() {
         <input class="pfc-input" type="number" inputmode="decimal" placeholder="—" data-field="c">
       </div>
     </div>
-    <input class="item-content-input" type="text" placeholder="内容（例: 150g、1個）">
+    <input class="item-memo-input" type="text" placeholder="品目メモ（任意）">
   `
 
   // 品目名入力 → サジェスト
@@ -876,16 +836,11 @@ function createItemCard() {
     if (suggestTimer) clearTimeout(suggestTimer)
     suggestTimer = setTimeout(() => fetchSuggest(q, id, card, dropdown), 180)
   })
-  // blur時は dropdown自身がpointerdownを受け取れるよう少し遅延
   nameInput.addEventListener('blur', () => {
-    closeTimer = setTimeout(() => { dropdown.style.display = 'none' }, 500)
+    closeTimer = setTimeout(() => { dropdown.style.display = 'none' }, 200)
   })
   nameInput.addEventListener('focus', () => {
     if (closeTimer) clearTimeout(closeTimer)
-  })
-  // mousedown で e.preventDefault() → input の blur を防止（PC）
-  dropdown.addEventListener('mousedown', e => {
-    e.preventDefault()
   })
 
   // PFC変更 → サマリー更新
@@ -906,68 +861,35 @@ function createItemCard() {
 
 async function fetchSuggest(query, cardId, card, dropdown) {
   try {
-    const { data, error } = await supabase
-      .from('meals')
-      .select('menu_name, content, calories_kcal, protein_g, fat_g, carbs_g, measured_at')
-      .ilike('menu_name', `%${query}%`)
-      .order('measured_at', { ascending: false })
-      .limit(50)
+    const { data, error } = await supabase.rpc('suggest_meal_items', { p_query: query, p_limit: 6 })
     if (error || !data || data.length === 0) { dropdown.style.display = 'none'; return }
-    // (menu_name, content) ペアで集約
-    // measured_at DESC順なので先頭が最新。kcal/PFCはnullなら古い値にフォールバック
-    const seen = new Map()
-    for (const row of data) {
-      const key = (row.menu_name || '') + '|||' + (row.content || '')
-      if (!seen.has(key)) {
-        seen.set(key, {
-          menu_name: row.menu_name, content: row.content,
-          calories_kcal: row.calories_kcal, protein_g: row.protein_g,
-          fat_g: row.fat_g, carbs_g: row.carbs_g, use_count: 1
-        })
-      } else {
-        const e = seen.get(key)
-        e.use_count++
-        if (e.calories_kcal == null) e.calories_kcal = row.calories_kcal
-        if (e.protein_g   == null) e.protein_g   = row.protein_g
-        if (e.fat_g       == null) e.fat_g       = row.fat_g
-        if (e.carbs_g     == null) e.carbs_g     = row.carbs_g
-      }
-    }
-    const items = [...seen.values()].sort((a, b) => b.use_count - a.use_count).slice(0, 6)
-    dropdown.innerHTML = items.map(item => `
-      <div class="suggest-item"
-           data-name="${escHtml(item.menu_name || '')}"
-           data-content="${escHtml(item.content || '')}"
-           data-kcal="${item.calories_kcal ?? ''}"
-           data-p="${item.protein_g ?? ''}"
-           data-f="${item.fat_g ?? ''}"
-           data-c="${item.carbs_g ?? ''}">
-        <span class="suggest-name">
-          ${escHtml(item.menu_name || '')}
-          ${item.content ? '<span style="color:var(--text-hint);font-size:0.8em"> / ' + escHtml(item.content) + '</span>' : ''}
-        </span>
+    dropdown.innerHTML = data.map(item => `
+      <div class="suggest-item" data-name="${escHtml(item.menu_name)}"
+           data-kcal="${item.avg_kcal ?? ''}"
+           data-p="${item.avg_protein ?? ''}"
+           data-f="${item.avg_fat ?? ''}"
+           data-c="${item.avg_carbs ?? ''}">
+        <span class="suggest-name">${escHtml(item.menu_name)}</span>
         <span class="suggest-meta">
           <span class="suggest-badge">${item.use_count}回</span>
-          ${item.calories_kcal ? Math.round(item.calories_kcal) + ' kcal' : ''}
+          ${item.avg_kcal ? Math.round(item.avg_kcal) + ' kcal' : ''}
         </span>
       </div>
     `).join('')
-    dropdown.querySelectorAll('.suggest-item').forEach((si, idx) => {
-      const item = items[idx]
-      si.addEventListener('click', e => {
-        card.querySelector('.item-name-input').value = item.menu_name || ''
-        card.querySelector('.item-content-input').value = item.content || ''
-        const setNum = (field, val) => {
-          if (val == null) return
-          const n = parseFloat(val)
-          if (isNaN(n)) return
+    dropdown.querySelectorAll('.suggest-item').forEach(si => {
+      si.addEventListener('mousedown', e => {
+        e.preventDefault()
+        const nameInput = card.querySelector('.item-name-input')
+        nameInput.value = si.dataset.name
+        const fill = (field, val) => {
+          if (!val) return
           const inp = card.querySelector(`.pfc-input[data-field="${field}"]`)
-          if (inp) inp.value = n.toFixed(1)
+          if (inp) inp.value = parseFloat(val).toFixed(1)
         }
-        setNum('kcal', item.calories_kcal)
-        setNum('p',    item.protein_g)
-        setNum('f',    item.fat_g)
-        setNum('c',    item.carbs_g)
+        fill('kcal', si.dataset.kcal)
+        fill('p', si.dataset.p)
+        fill('f', si.dataset.f)
+        fill('c', si.dataset.c)
         dropdown.style.display = 'none'
         updateSummary()
       })
@@ -988,7 +910,6 @@ function initMealForm() {
   itemCardCount = 0
   list.appendChild(createItemCard())
   updateSummary()
-  loadExistingMeals()
 }
 
 document.getElementById('add-item-btn').addEventListener('click', () => {
@@ -1013,58 +934,28 @@ function updateSummary() {
   document.getElementById('sum-c').textContent = c.toFixed(1) + 'g'
 }
 
-// ── 既存食事データ表示 ────────────────────────
+// ── daily_log 確保ヘルパー ─────────────────────
+// measured_at (UTC ISO文字列) から JST AM4:00境界で target_date を算出し、
+// daily_logs を UPSERT して id を返す。
 
-let existingVisible = true
+async function ensureDailyLog(measuredAtISO) {
+  const jstMs = new Date(measuredAtISO).getTime() + 9 * 60 * 60 * 1000
+  const td = new Date(jstMs - 4 * 60 * 60 * 1000)
+  const targetDate = td.toISOString().slice(0, 10)          // YYYY-MM-DD
+  const dayStartAt = targetDate + 'T04:00:00+09:00'
 
-async function loadExistingMeals() {
-  const section = document.getElementById('existing-section')
-  const listEl = document.getElementById('existing-list')
-  const labelEl = document.getElementById('existing-label')
+  const { data, error } = await supabase
+    .from('daily_logs')
+    .upsert(
+      { user_id: currentUserId, target_date: targetDate, day_start_at: dayStartAt },
+      { onConflict: 'user_id,target_date' }
+    )
+    .select('id')
+    .single()
 
-  // 日付範囲計算（AM4:00 JST 境界）
-  const dateStr = currentDate.toLocaleDateString('sv-SE') // YYYY-MM-DD
-  const start = new Date(dateStr + 'T04:00:00+09:00').toISOString()
-  const nextDate = new Date(currentDate)
-  nextDate.setDate(nextDate.getDate() + 1)
-  const nextStr = nextDate.toLocaleDateString('sv-SE')
-  const end = new Date(nextStr + 'T04:00:00+09:00').toISOString()
-
-  const { data } = await supabase
-    .from('meals')
-    .select('id, menu_name, content, calories_kcal, meal_type')
-    .gte('measured_at', start)
-    .lt('measured_at', end)
-    .eq('meal_type', selectedMealType)
-    .order('id', { ascending: true })
-
-  if (!data || data.length === 0) {
-    section.style.display = 'none'
-    return
-  }
-
-  const typeLabel = { breakfast:'朝食', lunch:'昼食', dinner:'夕食', snack:'間食' }
-  const totalKcal = data.reduce((s, r) => s + (r.calories_kcal ? Number(r.calories_kcal) : 0), 0)
-  labelEl.textContent = `${typeLabel[selectedMealType] || '食事'}の記録（${data.length}品目・計${Math.round(totalKcal)}kcal）`
-
-  listEl.innerHTML = data.map(r => `
-    <div class="existing-row">
-      <span class="existing-name">${escHtml(r.menu_name || '—')}</span>
-      ${r.content ? `<span class="existing-content">${escHtml(r.content)}</span>` : ''}
-      <span class="existing-kcal">${r.calories_kcal ? Math.round(r.calories_kcal) + ' kcal' : '—'}</span>
-    </div>
-  `).join('')
-
-  section.style.display = 'block'
+  if (error) throw new Error('daily_log 作成失敗: ' + error.message)
+  return data.id
 }
-
-document.getElementById('existing-toggle').addEventListener('click', () => {
-  const listEl = document.getElementById('existing-list')
-  const btn = document.getElementById('existing-toggle')
-  existingVisible = !existingVisible
-  listEl.style.display = existingVisible ? 'block' : 'none'
-  btn.textContent = existingVisible ? '▼ 非表示' : '▶ 表示'
-})
 
 // ── 食事保存 ──────────────────────────────────
 
@@ -1083,7 +974,7 @@ document.getElementById('meal-save-btn').addEventListener('click', async () => {
       protein_g: n('p'),
       fat_g: n('f'),
       carbs_g: n('c'),
-      content: card.querySelector('.item-content-input').value.trim() || null,
+      content: card.querySelector('.item-memo-input').value.trim() || null,
     })
   })
 
@@ -1103,13 +994,24 @@ document.getElementById('meal-save-btn').addEventListener('click', async () => {
   btn.disabled = true
   btn.innerHTML = '<div class="spinner"></div> 保存中...'
 
+  // daily_logs を確保して daily_log_id を取得
+  let dailyLogId
+  try {
+    dailyLogId = await ensureDailyLog(measuredAt)
+  } catch (e) {
+    showToast('❌ ' + e.message)
+    btn.disabled = false
+    btn.textContent = 'この食事を保存'
+    return
+  }
+
   const rows = items.map(item => ({
     ...item,
-    user_id: currentUserId,
     meal_type: selectedMealType,
     measured_at: measuredAt,
     memo: memoWithTags,
     input_source: 'manual',
+    daily_log_id: dailyLogId,
   }))
 
   const { error } = await supabase.from('meals').insert(rows)
@@ -1123,7 +1025,6 @@ document.getElementById('meal-save-btn').addEventListener('click', async () => {
   }
 
   showToast('✓ ' + items.length + '品目を保存しました')
-  loadExistingMeals()
 
   // フォームリセット
   document.getElementById('meal-datetime').value = toLocalDatetimeValue()
@@ -1212,7 +1113,6 @@ document.getElementById('bmr-save-btn').addEventListener('click', async () => {
   btn.innerHTML = '<div class="spinner"></div> 保存中...'
 
   const { error } = await supabase.from('body_metrics').insert({
-    user_id: currentUserId,
     measured_at: localToUTC(dtVal),
     basal_metabolism_kcal: val,
     device_name: device,
@@ -1240,37 +1140,4 @@ const deviceDropdown = document.getElementById('device-suggest')
 let deviceSuggestTimer = null
 let deviceCloseTimer = null
 
-deviceInput.addEventListener('input', async () => {
-  const q = deviceInput.value.trim()
-  if (q.length === 0) { deviceDropdown.style.display = 'none'; return }
-  if (deviceSuggestTimer) clearTimeout(deviceSuggestTimer)
-  deviceSuggestTimer = setTimeout(async () => {
-    const { data } = await supabase.rpc('suggest_device_names', { p_query: q })
-    if (!data || data.length === 0) { deviceDropdown.style.display = 'none'; return }
-    deviceDropdown.innerHTML = data.slice(0, 5).map(d =>
-      `<div class="device-suggest-item">${escHtml(d.device_name ?? d)}</div>`
-    ).join('')
-    // mousedown で blur を防止してから click で選択
-    deviceDropdown.addEventListener('mousedown', e => e.preventDefault())
-    deviceDropdown.querySelectorAll('.device-suggest-item').forEach(item => {
-      item.addEventListener('click', e => {
-        deviceInput.value = item.textContent.trim()
-        deviceDropdown.style.display = 'none'
-      })
-    })
-    deviceDropdown.style.display = 'block'
-  }, 180)
-})
-deviceInput.addEventListener('blur', () => {
-  deviceCloseTimer = setTimeout(() => { deviceDropdown.style.display = 'none' }, 500)
-})
-deviceInput.addEventListener('focus', () => {
-  if (deviceCloseTimer) clearTimeout(deviceCloseTimer)
-})
-
-// ── 初期化 ────────────────────────────────────
-
-initAuth()
-</script>
-</body>
-</html>
+deviceInput.add
