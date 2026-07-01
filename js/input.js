@@ -366,6 +366,7 @@ document.getElementById('meal-save-btn').addEventListener('click', async () => {
 
   const rows = items.map(item => ({
     ...item,
+    user_id: currentUserId,
     meal_type: selectedMealType,
     measured_at: measuredAt,
     memo: memoWithTags,
@@ -471,8 +472,21 @@ document.getElementById('bmr-save-btn').addEventListener('click', async () => {
   btn.disabled = true
   btn.innerHTML = '<div class="spinner"></div> 保存中...'
 
+  const measuredAtBmr = localToUTC(dtVal)
+  let bmrDailyLogId
+  try {
+    bmrDailyLogId = await ensureDailyLog(measuredAtBmr)
+  } catch (e) {
+    showToast('❌ ' + e.message)
+    btn.disabled = false
+    btn.textContent = '基礎代謝を記録'
+    return
+  }
+
   const { error } = await supabase.from('body_metrics').insert({
-    measured_at: localToUTC(dtVal),
+    user_id: currentUserId,
+    daily_log_id: bmrDailyLogId,
+    measured_at: measuredAtBmr,
     basal_metabolism_kcal: val,
     device_name: device,
     memo: memo,
